@@ -411,6 +411,8 @@
         }
 
         .hidden { display: none; }
+        .error-message { color: #e74c3c; font-size: 12px; margin-top: 10px; }
+        .success-message { color: #27ae60; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -420,12 +422,14 @@
     <h1>🎮 MULTI-DEVICE GAMES</h1>
     <p>Play Chess, Checkers & variants with friends on different devices!</p>
     
-    <button id="createBtn" class="btn btn-primary">➕ CREATE ROOM</button>
+    <div id="firebaseStatus" class="waiting-status" style="color: #ffd700; font-size: 12px;">⏳ Connecting to Firebase...</div>
+    
+    <button id="createBtn" class="btn btn-primary" disabled>➕ CREATE ROOM</button>
     
     <div style="margin: 20px 0">— OR JOIN —</div>
     
     <input type="text" id="joinCode" class="input-code" placeholder="000000" maxlength="6">
-    <button id="joinBtn" class="btn">🔗 JOIN</button>
+    <button id="joinBtn" class="btn" disabled>🔗 JOIN</button>
     <div id="connectStatus" class="waiting-status"></div>
 </div>
 
@@ -433,7 +437,7 @@
 <div id="lobbyScreen" class="screen" style="display: none;">
     <h1>🎮 GAME LOBBY</h1>
     <div class="room-code-display" id="lobbyRoomCode">------</div>
-    <p>Waiting for opponent to choose...</p>
+    <p id="lobbyOpponentStatus">Waiting for opponent to join...</p>
     
     <div class="mode-selector" id="lobbyModeSelector">
         <div class="mode-btn" data-mode="standard">♔ Chess</div>
@@ -449,7 +453,7 @@
         <div class="color-btn" data-color="black">⚫ BLACK</div>
     </div>
     
-    <button id="readyBtn" class="btn btn-success start-btn">✅ READY TO PLAY</button>
+    <button id="readyBtn" class="btn btn-success start-btn" disabled>✅ READY TO PLAY</button>
     <button id="cancelBtn" class="btn btn-danger" style="margin-top: 10px;">🚪 CANCEL</button>
     <div id="lobbyStatus" class="waiting-status"></div>
 </div>
@@ -491,9 +495,14 @@
     <footer>🔗 Playing on different devices • Moves sync automatically</footer>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 <script>
     // ==================== FIREBASE CONFIG ====================
-    // Replace with your Firebase config from console.firebase.google.com
+    // !!! REPLACE THIS WITH YOUR ACTUAL FIREBASE CONFIG !!!
+    // Get it from: https://console.firebase.google.com -> Project Settings -> Your apps
+    
     const firebaseConfig = {
         apiKey: "AIzaSyBVMVofp3tqPWDsv7PJr_3-9QD7r1FTF4A",
         authDomain: "multidevicegames-deb35.firebaseapp.com",
@@ -504,21 +513,60 @@
         appId: "1:550870350070:web:292fdd7696b3a8c59a94d7"
     };
     
-    // Initialize Firebase
+    // ==================== INITIALIZE FIREBASE ====================
     let database = null;
-    try {
-        firebase.initializeApp(firebaseConfig);
-        database = firebase.database();
-        console.log("✅ Firebase connected!");
-    } catch(e) {
-        alert("⚠️ Firebase not configured. Please set up Firebase first.\n\n1. Go to console.firebase.google.com\n2. Create a project\n3. Enable Realtime Database\n4. Copy your config to firebaseConfig");
+    let firebaseConnected = false;
+    const firebaseStatusDiv = document.getElementById('firebaseStatus');
+    const createBtn = document.getElementById('createBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    
+    function initFirebase() {
+        // Check if config is still default
+        if (firebaseConfig.apiKey === "AIzaSyB3q6tWp5K8xL9mN2pQ7rS8tU9vW1xY2z") {
+            firebaseStatusDiv.innerHTML = '⚠️ Please replace firebaseConfig with your actual Firebase project settings. See console.firebase.google.com';
+            firebaseStatusDiv.style.color = '#e74c3c';
+            return;
+        }
+        
+        try {
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            database = firebase.database();
+            
+            // Test connection
+            database.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === true) {
+                    firebaseConnected = true;
+                    firebaseStatusDiv.innerHTML = '✅ Connected to Firebase! Ready to play!';
+                    firebaseStatusDiv.style.color = '#27ae60';
+                    createBtn.disabled = false;
+                    joinBtn.disabled = false;
+                } else {
+                    firebaseConnected = false;
+                    firebaseStatusDiv.innerHTML = '⚠️ Disconnected. Check your internet.';
+                    firebaseStatusDiv.style.color = '#e74c3c';
+                    createBtn.disabled = true;
+                    joinBtn.disabled = true;
+                }
+            });
+            
+            console.log("✅ Firebase initialized successfully!");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            firebaseStatusDiv.innerHTML = '❌ Firebase error: ' + error.message;
+            firebaseStatusDiv.style.color = '#e74c3c';
+        }
     }
+    
+    // Call this AFTER you replace the config
+    initFirebase();
     
     // ==================== GAME STATE ====================
     let currentRoomId = null;
     let myColor = null; // 'white' or 'black'
     let myReady = false;
-    let opponentReady = false;
     let gameStarted = false;
     let gameState = null;
     let selectedSquare = null;
@@ -527,11 +575,12 @@
     let lobbyListener = null;
     
     // DOM Elements
-    const connectionScreen = document.getElementById('connectionScreen');
-    const lobbyScreen = document.getElementById('lobbyScreen');
-    const gameScreen = document.getElementById('gameScreen');
+    const connectionScreenDiv = document.getElementById('connectionScreen');
+    const lobbyScreenDiv = document.getElementById('lobbyScreen');
+    const gameScreenDiv = document.getElementById('gameScreen');
     const lobbyRoomCodeSpan = document.getElementById('lobbyRoomCode');
     const lobbyStatus = document.getElementById('lobbyStatus');
+    const lobbyOpponentStatus = document.getElementById('lobbyOpponentStatus');
     const connectStatus = document.getElementById('connectStatus');
     const gameRoomCodeSpan = document.getElementById('gameRoomCode');
     const gamePlayerRoleSpan = document.getElementById('gamePlayerRole');
@@ -571,11 +620,10 @@
     function initChessBoard() {
         board = Array(8).fill().map(() => Array(8).fill(null));
         for (let i = 0; i < 8; i++) {
-            board[1][i] = { type: 'p', color: 'black' };
-            board[6][i] = { type: 'p', color: 'white' };
+            board[1][i] = { type: 'pawn', color: 'black' };
+            board[6][i] = { type: 'pawn', color: 'white' };
         }
-        
-        const pieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        const pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
         if (currentMode === 'chess960') {
             let shuffled = [...pieces];
             for (let i = shuffled.length - 1; i > 0; i--) {
@@ -596,20 +644,20 @@
     
     function initHordeBoard() {
         board = Array(8).fill().map(() => Array(8).fill(null));
-        const blackPieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        const blackPieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
         for (let i = 0; i < 8; i++) {
             board[0][i] = { type: blackPieces[i], color: 'black' };
-            board[1][i] = { type: 'p', color: 'black' };
+            board[1][i] = { type: 'pawn', color: 'black' };
         }
         for (let i = 0; i < 8; i++) {
-            board[7][i] = { type: 'p', color: 'white' };
-            board[6][i] = { type: 'p', color: 'white' };
-            board[5][i] = { type: 'p', color: 'white' };
-            board[4][i] = { type: 'p', color: 'white' };
+            board[7][i] = { type: 'pawn', color: 'white' };
+            board[6][i] = { type: 'pawn', color: 'white' };
+            board[5][i] = { type: 'pawn', color: 'white' };
+            board[4][i] = { type: 'pawn', color: 'white' };
         }
         const row3Pattern = [false, true, true, false, false, true, true, false];
         for (let i = 0; i < 8; i++) {
-            if (row3Pattern[i]) board[3][i] = { type: 'p', color: 'white' };
+            if (row3Pattern[i]) board[3][i] = { type: 'pawn', color: 'white' };
         }
     }
     
@@ -711,7 +759,7 @@
         const color = piece.color;
         const type = piece.type;
         const moves = [];
-        if (type === 'p') {
+        if (type === 'pawn') {
             const dir = color === 'white' ? -1 : 1;
             const startRow = color === 'white' ? 6 : 1;
             const r1 = row + dir;
@@ -729,7 +777,7 @@
                     }
                 }
             }
-        } else if (type === 'n') {
+        } else if (type === 'knight') {
             const offsets = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
             for (const [dr, dc] of offsets) {
                 const r = row + dr, c = col + dc;
@@ -738,7 +786,7 @@
                     if (!target || target.color !== color) moves.push({ row: r, col: c });
                 }
             }
-        } else if (type === 'r' || type === 'q') {
+        } else if (type === 'rook' || type === 'queen') {
             const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
             for (const [dr, dc] of dirs) {
                 let r = row + dr, c = col + dc;
@@ -752,7 +800,7 @@
                     r += dr; c += dc;
                 }
             }
-        } else if (type === 'b' || type === 'q') {
+        } else if (type === 'bishop' || type === 'queen') {
             const dirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
             for (const [dr, dc] of dirs) {
                 let r = row + dr, c = col + dc;
@@ -766,7 +814,7 @@
                     r += dr; c += dc;
                 }
             }
-        } else if (type === 'k') {
+        } else if (type === 'king') {
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     if (dr === 0 && dc === 0) continue;
@@ -940,7 +988,7 @@
     }
     
     function renderBoard() {
-        if (!board) return;
+        if (!board || !board.length) return;
         boardDiv.innerHTML = '';
         const isMyPerspective = (myColor === 'white');
         for (let displayRow = 0; displayRow < 8; displayRow++) {
@@ -994,7 +1042,7 @@
             const success = makeMove(fromRow, fromCol, row, col);
             selectedSquare = null;
             validMovesList = [];
-            if (success && database && currentRoomId) {
+            if (success && database && currentRoomId && firebaseConnected) {
                 syncGameToFirebase();
             }
             renderBoard();
@@ -1002,7 +1050,7 @@
     }
     
     function syncGameToFirebase() {
-        if (!database || !currentRoomId) return;
+        if (!database || !currentRoomId || !firebaseConnected) return;
         const gameData = {
             board: board,
             currentTurn: currentTurn,
@@ -1011,11 +1059,11 @@
             lastMoveFrom: lastMoveFrom,
             lastMoveTo: lastMoveTo
         };
-        database.ref(`games/${currentRoomId}/gameState`).set(gameData);
+        database.ref(`games/${currentRoomId}/gameState`).set(gameData).catch(e => console.error("Sync error:", e));
     }
     
     function loadGameFromFirebase(data) {
-        if (data) {
+        if (data && data.board) {
             board = data.board;
             currentTurn = data.currentTurn;
             gameOver = data.gameOver;
@@ -1027,6 +1075,7 @@
     }
     
     function startGameListener() {
+        if (!database || !currentRoomId || !firebaseConnected) return;
         if (gameListener) database.ref(`games/${currentRoomId}/gameState`).off();
         gameListener = database.ref(`games/${currentRoomId}/gameState`);
         gameListener.on('value', (snapshot) => {
@@ -1041,12 +1090,22 @@
     }
     
     function startLobbyListener(roomId) {
+        if (!database || !firebaseConnected) return;
         if (lobbyListener) database.ref(`lobbies/${roomId}`).off();
         lobbyListener = database.ref(`lobbies/${roomId}`);
         lobbyListener.on('value', (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                if (data.ready && data.readyPlayer1 && data.readyPlayer2 && data.gameMode && data.player1Color && data.player2Color) {
+                
+                // Update lobby status
+                if (data.player2Id) {
+                    lobbyOpponentStatus.innerHTML = '✅ Opponent joined! Choose your settings and click READY.';
+                } else {
+                    lobbyOpponentStatus.innerHTML = '⏳ Waiting for opponent to join... Share the room code!';
+                }
+                
+                // Check if both ready and game can start
+                if (data.readyPlayer1 && data.readyPlayer2 && data.gameMode && data.player1Color && data.player2Color) {
                     currentMode = data.gameMode;
                     myColor = (myColor === data.player1Color) ? data.player1Color : data.player2Color;
                     initBoard();
@@ -1055,20 +1114,22 @@
                     gameStarted = true;
                     syncGameToFirebase();
                     startGameListener();
-                    lobbyScreen.style.display = 'none';
-                    gameScreen.style.display = 'block';
+                    lobbyScreenDiv.style.display = 'none';
+                    gameScreenDiv.style.display = 'block';
                     gameRoomCodeSpan.textContent = `Room: ${roomId}`;
                     gamePlayerRoleSpan.textContent = myColor === 'white' ? '⚪ WHITE' : '⚫ BLACK';
                     renderBoard();
-                }
-                if (data.gameMode) {
-                    lobbyStatus.innerHTML = `Game: ${data.gameMode} | Opponent chose ${data.player2Color === 'white' ? 'WHITE' : 'BLACK'}`;
                 }
             }
         });
     }
     
     function createRoom() {
+        if (!firebaseConnected) {
+            connectStatus.innerHTML = '❌ Firebase not connected. Please wait...';
+            return;
+        }
+        
         const roomId = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
         currentRoomId = roomId;
         lobbyRoomCodeSpan.textContent = roomId;
@@ -1078,34 +1139,66 @@
             player2Color: null,
             gameMode: null,
             readyPlayer1: false,
-            readyPlayer2: false,
-            ready: false
+            readyPlayer2: false
         };
         database.ref(`lobbies/${roomId}`).set(lobbyData);
         startLobbyListener(roomId);
-        connectionScreen.style.display = 'none';
-        lobbyScreen.style.display = 'block';
+        connectionScreenDiv.style.display = 'none';
+        lobbyScreenDiv.style.display = 'block';
         
+        // Enable ready button when user makes selections
+        const checkReady = () => {
+            const hasColor = document.querySelector('#colorSelector .color-btn.selected') !== null;
+            const hasMode = document.querySelector('#lobbyModeSelector .mode-btn.active') !== null;
+            document.getElementById('readyBtn').disabled = !(hasColor && hasMode);
+        };
+        
+        document.querySelectorAll('#lobbyModeSelector .mode-btn, #colorSelector .color-btn').forEach(el => {
+            el.addEventListener('click', checkReady);
+        });
+        checkReady();
+        
+        // Show QR code
         const qrUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-        const qrContainer = document.getElementById('qrContainer');
-        if (qrContainer) qrContainer.innerHTML = `<div class="qr-container"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}"><p>Scan to join</p></div>`;
+        const qrContainer = document.createElement('div');
+        qrContainer.className = 'qr-container';
+        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}"><p>Scan to join</p>`;
+        lobbyScreenDiv.querySelector('h1').after(qrContainer);
     }
     
     function joinRoom(roomId) {
+        if (!firebaseConnected) {
+            connectStatus.innerHTML = '❌ Firebase not connected. Please wait...';
+            return;
+        }
+        
         currentRoomId = roomId;
         database.ref(`lobbies/${roomId}`).once('value', (snapshot) => {
             if (snapshot.exists()) {
                 startLobbyListener(roomId);
-                connectionScreen.style.display = 'none';
-                lobbyScreen.style.display = 'block';
+                connectionScreenDiv.style.display = 'none';
+                lobbyScreenDiv.style.display = 'block';
                 lobbyRoomCodeSpan.textContent = roomId;
                 database.ref(`lobbies/${roomId}/player2Id`).set(Date.now());
+                myColor = 'black';
+                
+                const checkReady = () => {
+                    const hasColor = document.querySelector('#colorSelector .color-btn.selected') !== null;
+                    const hasMode = document.querySelector('#lobbyModeSelector .mode-btn.active') !== null;
+                    document.getElementById('readyBtn').disabled = !(hasColor && hasMode);
+                };
+                
+                document.querySelectorAll('#lobbyModeSelector .mode-btn, #colorSelector .color-btn').forEach(el => {
+                    el.addEventListener('click', checkReady);
+                });
+                checkReady();
             } else {
                 connectStatus.innerHTML = '❌ Room not found!';
             }
         });
     }
     
+    // Event Listeners
     document.getElementById('createBtn')?.addEventListener('click', createRoom);
     document.getElementById('joinBtn')?.addEventListener('click', () => joinRoom(document.getElementById('joinCode').value));
     document.getElementById('cancelBtn')?.addEventListener('click', () => {
@@ -1114,6 +1207,7 @@
     });
     document.getElementById('gameLeaveBtn')?.addEventListener('click', () => location.reload());
     document.getElementById('gameResetBtn')?.addEventListener('click', () => {
+        if (!gameStarted) return;
         initBoard();
         currentTurn = 'white';
         gameOver = false;
@@ -1137,25 +1231,21 @@
             btn.classList.add('selected');
             const color = btn.dataset.color;
             database.ref(`lobbies/${currentRoomId}/player1Color`).set(color);
+            database.ref(`lobbies/${currentRoomId}/player2Color`).set(color === 'white' ? 'black' : 'white');
         });
     });
     
     document.getElementById('readyBtn')?.addEventListener('click', () => {
         if (!database || !currentRoomId) return;
-        myReady = true;
         database.ref(`lobbies/${currentRoomId}/readyPlayer1`).set(true);
-        const gameMode = document.querySelector('#lobbyModeSelector .mode-btn.active')?.dataset.mode || 'standard';
-        const myColorChoice = document.querySelector('#colorSelector .color-btn.selected')?.dataset.color || 'white';
-        database.ref(`lobbies/${currentRoomId}/player1Color`).set(myColorChoice);
-        database.ref(`lobbies/${currentRoomId}/gameMode`).set(gameMode);
-        lobbyStatus.innerHTML = 'Waiting for opponent...';
+        lobbyStatus.innerHTML = 'Waiting for opponent to ready up...';
     });
     
     const urlParams = new URLSearchParams(window.location.search);
     const roomFromUrl = urlParams.get('room');
     if (roomFromUrl && roomFromUrl.length === 6) {
         document.getElementById('joinCode').value = roomFromUrl;
-        setTimeout(() => joinRoom(roomFromUrl), 500);
+        setTimeout(() => joinRoom(roomFromUrl), 1000);
     }
     
     initBoard();
