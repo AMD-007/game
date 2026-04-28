@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Multiplayer Game Arena - 6 Games</title>
+    <title>Multiplayer Game Arena - Complete</title>
     <style>
         * {
             margin: 0;
@@ -46,12 +46,12 @@
         .card-header h2 {
             color: #ffd700;
             font-size: 22px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .card-header p {
             color: #aaa;
-            font-size: 12px;
+            font-size: 13px;
         }
 
         .btn {
@@ -138,7 +138,7 @@
         }
 
         .side-option .side-icon {
-            font-size: 28px;
+            font-size: 32px;
             margin-bottom: 6px;
         }
 
@@ -213,7 +213,7 @@
             width: 100%;
             aspect-ratio: 1 / 1;
             background: #f0d9b5;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
         }
 
@@ -229,30 +229,49 @@
 
         @media (max-width: 500px) {
             .square {
-                font-size: 20px;
+                font-size: 22px;
             }
+        }
+
+        @media (max-width: 400px) {
+            .square {
+                font-size: 18px;
+            }
+        }
+
+        .square span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
         }
 
         .square .red-king {
             color: #e74c3c;
-            text-shadow: 0 0 6px #ff0000;
-            font-size: 28px;
+            text-shadow: 0 0 5px #ff0000;
+            font-size: 32px;
             font-weight: bold;
         }
         
         .square .black-king {
             color: #1a1a2e;
-            text-shadow: 0 0 6px #4a4a6a;
-            font-size: 28px;
+            text-shadow: 0 0 5px #4a4a6a;
+            font-size: 32px;
             font-weight: bold;
+        }
+
+        @media (max-width: 500px) {
+            .square .red-king, .square .black-king {
+                font-size: 26px;
+            }
         }
 
         .square.light { background-color: #f0d9b5; }
         .square.dark { background-color: #b58863; }
         .square.selected { background: linear-gradient(135deg, #6f9e4f, #4a7a2e); box-shadow: inset 0 0 0 2px #ffd700; }
-        .square.valid-move::after { content: "●"; position: absolute; font-size: 20px; color: #4caf50; opacity: 0.8; pointer-events: none; }
-        .square.capture::after { content: "●"; color: #ff5722; font-size: 28px; }
-        .square.in-check::before { content: ""; position: absolute; inset: -2px; background: radial-gradient(circle, rgba(192,57,43,0.5), rgba(192,57,43,0.2)); border-radius: 4px; pointer-events: none; }
+        .square.valid-move::after { content: ""; position: absolute; width: 30%; height: 30%; background: #4caf50; border-radius: 50%; opacity: 0.8; pointer-events: none; }
+        .square.capture::after { background: #ff5722; width: 60%; height: 60%; border-radius: 8px; }
 
         .game-status {
             background: #16162a;
@@ -288,6 +307,10 @@
             font-weight: bold;
         }
 
+        .player-info .opponent-side {
+            color: #aaa;
+        }
+
         footer {
             text-align: center;
             padding: 10px;
@@ -306,7 +329,7 @@
             <p>Play chess & checkers with friends</p>
         </div>
         <button class="btn btn-primary" onclick="showCreateRoom()">🏠 Create Room</button>
-        <div style="height: 10px;"></div>
+        <div style="height: 12px;"></div>
         <button class="btn" onclick="showJoinRoom()">🔗 Join Room</button>
     </div>
 </div>
@@ -326,19 +349,46 @@
         
         <label>Select Game</label>
         <div class="game-grid" id="gameSelectCreate">
-            <div class="game-option" data-game="standard"><div class="game-icon">♔</div><div class="game-name">Chess</div></div>
-            <div class="game-option" data-game="chess960"><div class="game-icon">🎲</div><div class="game-name">Chess960</div></div>
-            <div class="game-option" data-game="kinghill"><div class="game-icon">🏔️</div><div class="game-name">King Hill</div></div>
-            <div class="game-option" data-game="horde"><div class="game-icon">⚔️</div><div class="game-name">Horde</div></div>
-            <div class="game-option" data-game="checkers"><div class="game-icon">🔴</div><div class="game-name">Checkers</div></div>
-            <div class="game-option" data-game="anticheckers"><div class="game-icon">💀</div><div class="game-name">Anti</div></div>
+            <div class="game-option" data-game="standard">
+                <div class="game-icon">♔</div>
+                <div class="game-name">Chess</div>
+            </div>
+            <div class="game-option" data-game="chess960">
+                <div class="game-icon">🎲</div>
+                <div class="game-name">Chess960</div>
+            </div>
+            <div class="game-option" data-game="kinghill">
+                <div class="game-icon">🏔️</div>
+                <div class="game-name">King Hill</div>
+            </div>
+            <div class="game-option" data-game="horde">
+                <div class="game-icon">⚔️</div>
+                <div class="game-name">Horde</div>
+            </div>
+            <div class="game-option" data-game="checkers">
+                <div class="game-icon">🔴</div>
+                <div class="game-name">Checkers</div>
+            </div>
+            <div class="game-option" data-game="anticheckers">
+                <div class="game-icon">💀</div>
+                <div class="game-name">Anti</div>
+            </div>
         </div>
         
         <label>Choose Your Side</label>
         <div class="side-grid" id="sideSelectCreate">
-            <div class="side-option" data-side="white"><div class="side-icon">⚪</div><div class="side-name">White/Red</div></div>
-            <div class="side-option" data-side="black"><div class="side-icon">⚫</div><div class="side-name">Black</div></div>
-            <div class="side-option" data-side="random"><div class="side-icon">🎲</div><div class="side-name">Random</div></div>
+            <div class="side-option" data-side="white">
+                <div class="side-icon">⚪</div>
+                <div class="side-name">White / Red</div>
+            </div>
+            <div class="side-option" data-side="black">
+                <div class="side-icon">⚫</div>
+                <div class="side-name">Black</div>
+            </div>
+            <div class="side-option" data-side="random">
+                <div class="side-icon">🎲</div>
+                <div class="side-name">Random</div>
+            </div>
         </div>
         
         <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
@@ -404,7 +454,6 @@
         </div>
         <button class="btn btn-danger" onclick="leaveGame()">Leave Game</button>
     </div>
-    <footer>💀 Anti = Lose all pieces to win | 🏔️ Hill = king to center</footer>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -438,6 +487,7 @@
     let selectedSquare = null;
     let validMoves = [];
     let myTurn = false;
+    let gameOver = false;
     
     // ==================== UI SCREENS ====================
     function showHome() {
@@ -467,7 +517,6 @@
     function showGame() {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('gameScreen').classList.add('active');
-        setTimeout(() => renderBoard(), 100);
     }
     
     // ==================== GAME SELECTION ====================
@@ -489,10 +538,6 @@
             selectedSide = opt.dataset.side;
         });
     });
-    
-    // Select defaults
-    document.querySelector('#gameSelectCreate .game-option').classList.add('selected');
-    document.querySelector('#sideSelectCreate .side-option').classList.add('selected');
     
     // ==================== ROOM MANAGEMENT ====================
     function generateRoomCode() {
@@ -521,7 +566,6 @@
             finalSide = Math.random() < 0.5 ? 'white' : 'black';
         }
         currentPlayerSide = finalSide;
-        opponentSide = currentPlayerSide === 'white' ? 'black' : 'white';
         
         const initialGameState = getInitialGameState(selectedGame);
         
@@ -613,7 +657,6 @@
         
         listenForGameUpdates(roomCode, playerId);
         showGame();
-        updateGameTitle();
     }
     
     // ==================== INITIAL GAME STATE ====================
@@ -649,6 +692,7 @@
                 board[7][i] = { type: whiteRow[i], color: 'w' };
             }
         }
+        
         return board;
     }
     
@@ -688,6 +732,7 @@
         for (let i = 0; i < 8; i++) {
             if (row3Pattern[i]) board[3][i] = { type: 'p', color: 'w' };
         }
+        
         return board;
     }
     
@@ -718,7 +763,6 @@
                 roomRef.off();
                 listenForGameUpdates(roomCode, playerId);
                 showGame();
-                updateGameTitle();
             }
         });
     }
@@ -729,28 +773,51 @@
             const room = snapshot.val();
             if (room) {
                 currentGameState = room.gameState;
+                gameOver = room.gameOver;
                 myTurn = (room.turn === currentPlayerSide) && !room.gameOver;
                 renderBoard();
-                updateGameStatus(room);
-                updatePlayerInfo(room);
-                
-                if (room.gameOver) {
-                    if (room.winner === currentPlayerSide) {
-                        document.getElementById('gameMessage').innerHTML = '🏆 YOU WIN! 🏆';
-                    } else if (room.winner) {
-                        document.getElementById('gameMessage').innerHTML = '🏆 OPPONENT WINS! 🏆';
-                    } else {
-                        document.getElementById('gameMessage').innerHTML = '♟️ GAME DRAW! ♟️';
-                    }
-                }
+                updateUI(room);
             }
         });
     }
     
-    function updatePlayerInfo(room) {
-        const yourDisplay = currentPlayerSide === 'white' ? '⚪ White/Red (bottom)' : '⚫ Black (bottom)';
-        const opponentDisplay = opponentSide === 'white' ? '⚪ White/Red (top)' : '⚫ Black (top)';
-        document.getElementById('playerInfo').innerHTML = `🎮 You: ${yourDisplay} | 👤 ${opponentName || 'Opponent'}: ${opponentDisplay}`;
+    function updateUI(room) {
+        // Update player info
+        const yourDisplay = currentPlayerSide === 'white' ? '⚪ White / Red' : '⚫ Black';
+        const opponentDisplay = opponentSide === 'white' ? '⚪ White / Red' : '⚫ Black';
+        document.getElementById('playerInfo').innerHTML = `
+            <span class="your-side">You: ${yourDisplay}</span> &nbsp;|&nbsp;
+            <span class="opponent-side">${opponentName || 'Opponent'}: ${opponentDisplay}</span>
+        `;
+        
+        // Update turn display
+        const turnName = room.turn === 'white' ? 'White / Red' : 'Black';
+        document.getElementById('turnDisplay').innerHTML = `${turnName} to move ${myTurn ? '(YOUR TURN)' : ''}`;
+        
+        if (room.gameOver) {
+            if (room.winner === currentPlayerSide) {
+                document.getElementById('gameMessage').innerHTML = '🎉 YOU WIN! 🎉';
+            } else if (room.winner) {
+                document.getElementById('gameMessage').innerHTML = '😢 OPPONENT WINS! 😢';
+            } else {
+                document.getElementById('gameMessage').innerHTML = '🤝 GAME DRAW! 🤝';
+            }
+        } else if (myTurn) {
+            document.getElementById('gameMessage').innerHTML = 'Tap a piece to move';
+        } else {
+            document.getElementById('gameMessage').innerHTML = 'Waiting for opponent...';
+        }
+        
+        const modeNames = {
+            standard: '♔ Standard Chess',
+            chess960: '🎲 Chess960',
+            kinghill: '🏔️ King of the Hill',
+            horde: '⚔️ Horde Chess',
+            checkers: '🔴 Checkers',
+            anticheckers: '💀 Anti-Checkers'
+        };
+        document.getElementById('gameTitle').innerHTML = modeNames[currentGameMode];
+        document.getElementById('gameSubtitle').innerHTML = `You are ${yourDisplay} (bottom)`;
     }
     
     // ==================== PIECE SYMBOLS ====================
@@ -763,7 +830,7 @@
         if (!piece) return '';
         if (piece.type === 'checker') {
             if (piece.king) {
-                return piece.color === 'w' ? '👑' : '👑';
+                return piece.color === 'w' ? '<span class="red-king">👑</span>' : '<span class="black-king">👑</span>';
             }
             return piece.color === 'w' ? '🔴' : '⚫';
         }
@@ -775,78 +842,56 @@
         if (!currentGameState) return;
         
         const container = document.getElementById('gameBoard');
-        if (!container) return;
         container.innerHTML = '';
         
-        const isWhitePlayer = currentPlayerSide === 'white';
+        // White player sees board normally, Black player sees rotated 180°
+        const isWhite = currentPlayerSide === 'white';
         
-        for (let displayRow = 0; displayRow < 8; displayRow++) {
-            for (let displayCol = 0; displayCol < 8; displayCol++) {
-                let actualRow, actualCol;
-                
-                if (isWhitePlayer) {
-                    actualRow = 7 - displayRow;
-                    actualCol = displayCol;
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                let boardRow, boardCol;
+                if (isWhite) {
+                    boardRow = 7 - r;
+                    boardCol = c;
                 } else {
-                    actualRow = displayRow;
-                    actualCol = 7 - displayCol;
+                    boardRow = r;
+                    boardCol = 7 - c;
                 }
                 
-                const piece = currentGameState[actualRow][actualCol];
-                const isLight = (actualRow + actualCol) % 2 === 0;
+                const piece = currentGameState[boardRow][boardCol];
+                const isLight = (boardRow + boardCol) % 2 === 0;
                 const square = document.createElement('div');
                 square.className = `square ${isLight ? 'light' : 'dark'}`;
                 
-                if (selectedSquare && selectedSquare.row === actualRow && selectedSquare.col === actualCol) {
+                if (selectedSquare && selectedSquare.row === boardRow && selectedSquare.col === boardCol) {
                     square.classList.add('selected');
                 }
                 
-                const isValid = validMoves.some(m => m.row === actualRow && m.col === actualCol);
+                const isValid = validMoves.some(m => m.row === boardRow && m.col === boardCol);
                 if (isValid) {
                     square.classList.add('valid-move');
                     if (piece && piece.color !== currentPlayerSide) square.classList.add('capture');
                 }
                 
-                square.textContent = getPieceDisplay(piece);
+                const span = document.createElement('span');
+                const display = getPieceDisplay(piece);
+                if (display.includes('red-king') || display.includes('black-king')) {
+                    span.innerHTML = display;
+                } else {
+                    span.textContent = display;
+                }
+                square.appendChild(span);
                 
-                square.addEventListener('click', (function(r, c) {
-                    return function() { handleSquareClick(r, c); };
-                })(actualRow, actualCol));
-                
+                square.addEventListener('click', () => handleSquareClick(boardRow, boardCol));
                 container.appendChild(square);
             }
         }
     }
     
-    function updateGameStatus(room) {
-        const turnName = room.turn === 'white' ? 'White/Red' : 'Black';
-        const isMyTurn = (room.turn === currentPlayerSide) && !room.gameOver;
-        document.getElementById('turnDisplay').innerHTML = `${turnName} to move ${isMyTurn ? '(YOUR TURN)' : ''}`;
-        
-        if (!room.gameOver && !isMyTurn) {
-            document.getElementById('gameMessage').innerHTML = '⏳ Waiting for opponent...';
-        } else if (!room.gameOver) {
-            document.getElementById('gameMessage').innerHTML = '👆 Tap a piece to move';
-        }
-    }
-    
-    function updateGameTitle() {
-        const modeNames = {
-            standard: '♔ Standard Chess',
-            chess960: '🎲 Chess960',
-            kinghill: '🏔️ King of the Hill',
-            horde: '⚔️ Horde Chess',
-            checkers: '🔴 Checkers',
-            anticheckers: '💀 Anti-Checkers'
-        };
-        document.getElementById('gameTitle').innerHTML = modeNames[currentGameMode];
-        document.getElementById('gameSubtitle').innerHTML = `You are ${currentPlayerSide === 'white' ? 'White/Red' : 'Black'} (your pieces at bottom)`;
-    }
-    
     // ==================== MOVE VALIDATION ====================
     function getValidMoves(row, col, boardState, mode, playerSide) {
         const piece = boardState[row][col];
-        if (!piece) return [];
+        if (!piece || piece.color !== playerSide) return [];
         
         const moves = [];
         
@@ -873,55 +918,74 @@
                     }
                 }
             }
-            return moves;
-        }
-        
-        // Chess moves - simple pawn and piece movement
-        for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-                if (dr === 0 && dc === 0) continue;
-                const newRow = row + dr;
-                const newCol = col + dc;
-                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                    const target = boardState[newRow][newCol];
-                    if (!target || target.color !== piece.color) {
-                        moves.push({ row: newRow, col: newCol });
+        } else {
+            // Chess piece moves
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    
+                    let newRow = row + dr;
+                    let newCol = col + dc;
+                    let maxSteps = (piece.type === 'k') ? 1 : (piece.type === 'n') ? 1 : 7;
+                    
+                    for (let step = 0; step < maxSteps; step++) {
+                        if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+                        
+                        const target = boardState[newRow][newCol];
+                        if (!target) {
+                            moves.push({ row: newRow, col: newCol });
+                        } else {
+                            if (target.color !== piece.color) {
+                                moves.push({ row: newRow, col: newCol });
+                            }
+                            break;
+                        }
+                        
+                        if (piece.type === 'n') break;
+                        newRow += dr;
+                        newCol += dc;
                     }
                 }
             }
-        }
-        
-        // Pawn special
-        if (piece.type === 'p') {
-            const dir = piece.color === 'w' ? -1 : 1;
-            const forwardRow = row + dir;
-            if (forwardRow >= 0 && forwardRow < 8 && !boardState[forwardRow][col]) {
-                moves.push({ row: forwardRow, col });
-            }
-            for (const dc of [-1, 1]) {
-                const newCol = col + dc;
-                if (newCol >= 0 && newCol < 8) {
-                    const newRow = row + dir;
-                    if (newRow >= 0 && newRow < 8) {
-                        const target = boardState[newRow][newCol];
-                        if (target && target.color !== piece.color) {
-                            moves.push({ row: newRow, col: newCol });
+            
+            // Pawn special moves
+            if (piece.type === 'p') {
+                const dir = piece.color === 'w' ? -1 : 1;
+                const startRow = piece.color === 'w' ? 6 : 1;
+                
+                const forwardRow = row + dir;
+                if (forwardRow >= 0 && forwardRow < 8 && !boardState[forwardRow][col]) {
+                    moves.push({ row: forwardRow, col });
+                    if (row === startRow && !boardState[forwardRow + dir][col]) {
+                        moves.push({ row: forwardRow + dir, col });
+                    }
+                }
+                
+                for (const dc of [-1, 1]) {
+                    const newCol = col + dc;
+                    if (newCol >= 0 && newCol < 8) {
+                        const newRow = row + dir;
+                        if (newRow >= 0 && newRow < 8) {
+                            const target = boardState[newRow][newCol];
+                            if (target && target.color !== piece.color) {
+                                moves.push({ row: newRow, col: newCol });
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Knight moves
-        if (piece.type === 'n') {
-            const knightMoves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-            for (const [dr, dc] of knightMoves) {
-                const newRow = row + dr;
-                const newCol = col + dc;
-                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                    const target = boardState[newRow][newCol];
-                    if (!target || target.color !== piece.color) {
-                        moves.push({ row: newRow, col: newCol });
+            
+            // Knight moves
+            if (piece.type === 'n') {
+                const knightMoves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+                for (const [dr, dc] of knightMoves) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        const target = boardState[newRow][newCol];
+                        if (!target || target.color !== piece.color) {
+                            moves.push({ row: newRow, col: newCol });
+                        }
                     }
                 }
             }
@@ -931,31 +995,31 @@
     }
     
     async function handleSquareClick(row, col) {
-        if (!myTurn) {
-            document.getElementById('gameMessage').innerHTML = '⏳ Not your turn!';
+        if (!myTurn || gameOver) {
+            document.getElementById('gameMessage').innerHTML = !myTurn ? 'Not your turn!' : 'Game is over!';
             return;
         }
         
         if (!selectedSquare) {
             const piece = currentGameState[row][col];
             if (!piece) {
-                document.getElementById('gameMessage').innerHTML = '⬜ Empty square';
+                document.getElementById('gameMessage').innerHTML = 'Empty square';
                 return;
             }
             if (piece.color !== currentPlayerSide) {
-                document.getElementById('gameMessage').innerHTML = `❌ Not your piece! You are ${currentPlayerSide === 'white' ? 'White' : 'Black'}`;
+                document.getElementById('gameMessage').innerHTML = 'Not your piece!';
                 return;
             }
             selectedSquare = { row, col };
             validMoves = getValidMoves(row, col, currentGameState, currentGameMode, currentPlayerSide);
             renderBoard();
-            document.getElementById('gameMessage').innerHTML = `✅ Selected`;
+            document.getElementById('gameMessage').innerHTML = `Selected. Tap a highlighted square.`;
         } else {
             const isValid = validMoves.some(m => m.row === row && m.col === col);
             if (isValid) {
                 await makeMove(selectedSquare.row, selectedSquare.col, row, col);
             } else {
-                document.getElementById('gameMessage').innerHTML = '❌ Invalid move!';
+                document.getElementById('gameMessage').innerHTML = 'Invalid move!';
             }
             selectedSquare = null;
             validMoves = [];
@@ -987,12 +1051,32 @@
             newBoard[toRow][toCol].king = true;
         }
         
-        let gameOver = false;
+        let gameOverFlag = false;
         let winner = null;
         
         if (currentGameMode === 'kinghill' && piece.type === 'k' && toRow >= 3 && toRow <= 4 && toCol >= 3 && toCol <= 4) {
-            gameOver = true;
+            gameOverFlag = true;
             winner = currentPlayerSide;
+        } else if (currentGameMode === 'horde') {
+            let hasBlack = false;
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    if (newBoard[i][j] && newBoard[i][j].color === 'b') hasBlack = true;
+                }
+            }
+            if (!hasBlack) { gameOverFlag = true; winner = 'white'; }
+        } else if (currentGameMode === 'anticheckers') {
+            let hasWhite = false, hasBlack = false;
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    if (newBoard[i][j] && newBoard[i][j].type === 'checker') {
+                        if (newBoard[i][j].color === 'w') hasWhite = true;
+                        else hasBlack = true;
+                    }
+                }
+            }
+            if (!hasWhite) { gameOverFlag = true; winner = 'black'; }
+            if (!hasBlack) { gameOverFlag = true; winner = 'white'; }
         }
         
         const newTurn = currentPlayerSide === 'white' ? 'black' : 'white';
@@ -1000,15 +1084,11 @@
         await roomRef.update({
             gameState: newBoard,
             turn: newTurn,
-            gameOver: gameOver,
+            gameOver: gameOverFlag,
             winner: winner
         });
-        
-        myTurn = false;
-        document.getElementById('gameMessage').innerHTML = '📡 Move sent! Waiting for opponent...';
     }
     
-    // ==================== LEAVE ROOM ====================
     async function leaveRoom() {
         if (currentRoomId) {
             await database.ref('rooms/' + currentRoomId).remove();
