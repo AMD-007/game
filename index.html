@@ -78,10 +78,6 @@
             background: #c0392b;
         }
 
-        .btn-success {
-            background: #27ae60;
-        }
-
         .btn:active {
             transform: scale(0.97);
         }
@@ -279,6 +275,24 @@
             margin-top: 8px;
         }
 
+        .player-info {
+            background: #16162a;
+            border-radius: 60px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .player-info .your-side {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .player-info .opponent-side {
+            color: #aaa;
+        }
+
         footer {
             text-align: center;
             padding: 12px;
@@ -412,6 +426,7 @@
             <h2 id="gameTitle">Game</h2>
             <p id="gameSubtitle">Playing</p>
         </div>
+        <div class="player-info" id="playerInfo"></div>
         <div class="board-container">
             <div id="gameBoard"></div>
         </div>
@@ -447,7 +462,9 @@
     // ==================== GLOBAL STATE ====================
     let currentRoomId = null;
     let currentPlayerId = null;
-    let currentPlayerSide = null;
+    let currentPlayerSide = null; // 'white' or 'black'
+    let opponentSide = null;
+    let opponentName = null;
     let currentGameMode = 'standard';
     let currentGameState = null;
     let selectedSquare = null;
@@ -489,27 +506,22 @@
     let selectedGame = 'standard';
     let selectedSide = 'white';
     
-    // Game selection event listeners
     document.querySelectorAll('#gameSelectCreate .game-option').forEach(opt => {
         opt.addEventListener('click', () => {
             document.querySelectorAll('#gameSelectCreate .game-option').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
             selectedGame = opt.dataset.game;
-            console.log('Game selected:', selectedGame);
         });
     });
     
-    // Side selection event listeners
     document.querySelectorAll('#sideSelectCreate .side-option').forEach(opt => {
         opt.addEventListener('click', () => {
             document.querySelectorAll('#sideSelectCreate .side-option').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
             selectedSide = opt.dataset.side;
-            console.log('Side selected:', selectedSide);
         });
     });
     
-    // Select defaults
     document.querySelector('#gameSelectCreate .game-option').classList.add('selected');
     document.querySelector('#sideSelectCreate .side-option').classList.add('selected');
     
@@ -540,6 +552,7 @@
             finalSide = Math.random() < 0.5 ? 'white' : 'black';
         }
         currentPlayerSide = finalSide;
+        opponentSide = currentPlayerSide === 'white' ? 'black' : 'white';
         
         const initialGameState = getInitialGameState(selectedGame);
         
@@ -611,8 +624,14 @@
         currentPlayerId = playerId;
         currentGameMode = room.gameMode;
         
-        const existingPlayer = Object.values(room.players)[0];
+        // Get existing player info
+        const existingPlayerId = Object.keys(room.players)[0];
+        const existingPlayer = room.players[existingPlayerId];
+        
+        // Assign opposite side
         currentPlayerSide = existingPlayer.side === 'white' ? 'black' : 'white';
+        opponentSide = existingPlayer.side;
+        opponentName = existingPlayer.name;
         
         const playerUpdate = {
             [`rooms/${roomCode}/players/${playerId}`]: {
@@ -644,7 +663,6 @@
     function initChessBoard(mode) {
         const board = Array(8).fill().map(() => Array(8).fill(null));
         
-        // Pawns
         for (let i = 0; i < 8; i++) {
             board[1][i] = { type: 'p', color: 'b' };
             board[6][i] = { type: 'p', color: 'w' };
@@ -727,6 +745,12 @@
         roomRef.on('value', (snapshot) => {
             const room = snapshot.val();
             if (room && room.status === 'playing') {
+                // Get opponent info
+                const otherPlayerId = Object.keys(room.players).find(id => id !== playerId);
+                if (otherPlayerId) {
+                    opponentName = room.players[otherPlayerId].name;
+                    opponentSide = room.players[otherPlayerId].side;
+                }
                 roomRef.off();
                 listenForGameUpdates(roomCode, playerId);
                 showGame();
@@ -745,6 +769,7 @@
                 waitingForMove = myTurn;
                 renderBoard();
                 updateGameStatus(room);
+                updatePlayerInfo(room);
                 
                 if (room.gameOver) {
                     if (room.winner === currentPlayerSide) {
@@ -757,6 +782,17 @@
                 }
             }
         });
+    }
+    
+    function updatePlayerInfo(room) {
+        const isWhite = currentPlayerSide === 'white';
+        const yourSideDisplay = isWhite ? '⚪ White / Red' : '⚫ Black';
+        const opponentSideDisplay = opponentSide === 'white' ? '⚪ White / Red' : '⚫ Black';
+        
+        document.getElementById('playerInfo').innerHTML = `
+            <span class="your-side">You: ${yourSideDisplay} (${currentPlayerSide === 'white' ? 'bottom' : 'top'})</span> &nbsp;&nbsp;|&nbsp;&nbsp;
+            <span class="opponent-side">${opponentName || 'Opponent'}: ${opponentSideDisplay} (${opponentSide === 'white' ? 'bottom' : 'top'})</span>
+        `;
     }
     
     // ==================== PIECE SYMBOLS ====================
@@ -776,25 +812,43 @@
         return pieceSymbols[(piece.color === 'w' ? 'w' : 'b') + piece.type] || '';
     }
     
-    // ==================== RENDER BOARD ====================
+    // ==================== RENDER BOARD (WITH PROPER ORIENTATION) ====================
     function renderBoard() {
         if (!currentGameState) return;
         
         const container = document.getElementById('gameBoard');
         container.innerHTML = '';
         
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const piece = currentGameState[row][col];
-                const isLight = (row + col) % 2 === 0;
+        // White/Red player sees board from bottom (row 7 at bottom, row 0 at top)
+        // Black player sees board rotated 180 degrees (row 0 at bottom, row 7 at top)
+        const isWhitePlayer = currentPlayerSide === 'white';
+        
+        for (let viewRow = 0; viewRow < 8; viewRow++) {
+            for (let viewCol = 0; viewCol < 8; viewCol++) {
+                // Map view coordinates to actual board coordinates
+                let actualRow, actualCol;
+                if (isWhitePlayer) {
+                    // White: top row (0) is a8, bottom row (7) is a1
+                    actualRow = 7 - viewRow;
+                    actualCol = viewCol;
+                } else {
+                    // Black: rotated 180 degrees
+                    actualRow = viewRow;
+                    actualCol = 7 - viewCol;
+                }
+                
+                const piece = currentGameState[actualRow][actualCol];
+                const isLight = (actualRow + actualCol) % 2 === 0;
                 const square = document.createElement('div');
                 square.className = `square ${isLight ? 'light' : 'dark'}`;
                 
-                if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
+                // Check if this square is selected (using actual coordinates)
+                if (selectedSquare && selectedSquare.row === actualRow && selectedSquare.col === actualCol) {
                     square.classList.add('selected');
                 }
                 
-                const isValid = validMoves.some(m => m.row === row && m.col === col);
+                // Check if this is a valid move (using actual coordinates)
+                const isValid = validMoves.some(m => m.row === actualRow && m.col === actualCol);
                 if (isValid) {
                     square.classList.add('valid-move');
                     if (piece && piece.color !== currentPlayerSide) square.classList.add('capture');
@@ -809,7 +863,8 @@
                 }
                 square.appendChild(span);
                 
-                square.addEventListener('click', () => handleSquareClick(row, col));
+                // Pass actual board coordinates to click handler
+                square.addEventListener('click', () => handleSquareClick(actualRow, actualCol));
                 container.appendChild(square);
             }
         }
@@ -836,9 +891,9 @@
             checkers: '🔴 Checkers',
             anticheckers: '💀 Anti-Checkers'
         };
-        const sideNames = { white: 'White / Red', black: 'Black' };
+        const yourSideName = currentPlayerSide === 'white' ? 'White / Red' : 'Black';
         document.getElementById('gameTitle').innerHTML = modeNames[currentGameMode];
-        document.getElementById('gameSubtitle').innerHTML = `You are ${sideNames[currentPlayerSide]}`;
+        document.getElementById('gameSubtitle').innerHTML = `You are ${yourSideName} (${currentPlayerSide === 'white' ? 'bottom view' : 'top view'})`;
     }
     
     // ==================== MOVE VALIDATION & EXECUTION ====================
@@ -849,7 +904,6 @@
         const moves = [];
         
         if (mode === 'checkers' || mode === 'anticheckers') {
-            // Checkers logic
             const dir = piece.color === 'w' ? -1 : 1;
             const isKing = piece.king;
             const dirs = isKing ? [-1, 1] : [dir];
@@ -873,16 +927,16 @@
                 }
             }
         } else {
-            // Chess logic - simplified for all pieces
+            // Chess moves
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     if (dr === 0 && dc === 0) continue;
                     
                     let newRow = row + dr;
                     let newCol = col + dc;
-                    let steps = (piece.type === 'k') ? 1 : (piece.type === 'n') ? 1 : 7;
+                    let maxSteps = (piece.type === 'k') ? 1 : (piece.type === 'n') ? 1 : 7;
                     
-                    for (let s = 0; s < steps; s++) {
+                    for (let step = 0; step < maxSteps; step++) {
                         if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
                         
                         const target = boardState[newRow][newCol];
@@ -929,7 +983,7 @@
                 }
             }
             
-            // Knight special (remove diagonal restriction)
+            // Knight moves
             if (piece.type === 'n') {
                 const knightMoves = [
                     [-2, -1], [-2, 1], [-1, -2], [-1, 2],
@@ -948,7 +1002,6 @@
             }
         }
         
-        // Filter moves that would put own king in check (simplified)
         return moves;
     }
     
@@ -965,7 +1018,7 @@
                 return;
             }
             if (piece.color !== currentPlayerSide) {
-                document.getElementById('gameMessage').innerHTML = 'Not your piece!';
+                document.getElementById('gameMessage').innerHTML = `Not your piece! You are ${currentPlayerSide === 'white' ? 'White/Red' : 'Black'}`;
                 return;
             }
             selectedSquare = { row, col };
@@ -1012,18 +1065,16 @@
             newBoard[toRow][toCol].king = true;
         }
         
-        // Check for win conditions (simplified)
+        // Win conditions
         let gameOver = false;
         let winner = null;
         
         if (currentGameMode === 'kinghill') {
-            // King of the Hill win
             if (piece.type === 'k' && toRow >= 3 && toRow <= 4 && toCol >= 3 && toCol <= 4) {
                 gameOver = true;
                 winner = currentPlayerSide;
             }
         } else if (currentGameMode === 'horde') {
-            // Horde win check
             let hasBlack = false;
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
@@ -1035,7 +1086,6 @@
                 winner = 'white';
             }
         } else if (currentGameMode === 'anticheckers') {
-            // Anti-Checkers: lose all pieces to win
             let hasWhite = false, hasBlack = false;
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
