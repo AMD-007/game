@@ -444,7 +444,6 @@
 
 <script>
     // ==================== FIREBASE CONFIG ====================
-    // 🔴🔴🔴 REPLACE WITH YOUR FIREBASE CONFIG 🔴🔴🔴
     const firebaseConfig = {
         apiKey: "AIzaSyBVMVofp3tqPWDsv7PJr_3-9QD7r1FTF4A",
         authDomain: "multidevicegames-deb35.firebaseapp.com",
@@ -455,14 +454,13 @@
         appId: "1:550870350070:web:292fdd7696b3a8c59a94d7"
     };
     
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     
     // ==================== GLOBAL STATE ====================
     let currentRoomId = null;
     let currentPlayerId = null;
-    let currentPlayerSide = null; // 'white' or 'black'
+    let currentPlayerSide = null;
     let opponentSide = null;
     let opponentName = null;
     let currentGameMode = 'standard';
@@ -623,11 +621,9 @@
         currentPlayerId = playerId;
         currentGameMode = room.gameMode;
         
-        // Get existing player info
         const existingPlayerId = Object.keys(room.players)[0];
         const existingPlayer = room.players[existingPlayerId];
         
-        // Assign opposite side
         currentPlayerSide = existingPlayer.side === 'white' ? 'black' : 'white';
         opponentSide = existingPlayer.side;
         opponentName = existingPlayer.name;
@@ -763,6 +759,7 @@
             const room = snapshot.val();
             if (room) {
                 currentGameState = room.gameState;
+                // FIXED: Compare turn with player side correctly
                 myTurn = (room.turn === currentPlayerSide) && !room.gameOver;
                 renderBoard();
                 updateGameStatus(room);
@@ -782,7 +779,6 @@
     }
     
     function updatePlayerInfo(room) {
-        // Both players see their own pieces at the bottom
         const yourDisplay = currentPlayerSide === 'white' ? '⚪ White / Red (bottom)' : '⚫ Black (bottom)';
         const opponentDisplay = opponentSide === 'white' ? '⚪ White / Red (top)' : '⚫ Black (top)';
         
@@ -809,34 +805,28 @@
         return pieceSymbols[(piece.color === 'w' ? 'w' : 'b') + piece.type] || '';
     }
     
-    // ==================== RENDER BOARD (EACH PLAYER SEES THEIR COLOR AT BOTTOM) ====================
+    // ==================== RENDER BOARD ====================
     function renderBoard() {
         if (!currentGameState) return;
         
         const container = document.getElementById('gameBoard');
         container.innerHTML = '';
         
-        // CRITICAL: Each player sees their own pieces at the bottom
-        // White player: white pieces at bottom (row 7), black at top (row 0)
-        // Black player: black pieces at bottom (row 0), white at top (row 7)
-        // So we need to render the board rotated for black player
-        
+        // Each player sees their own pieces at the bottom
         const isWhitePlayer = currentPlayerSide === 'white';
         
         for (let displayRow = 0; displayRow < 8; displayRow++) {
             for (let displayCol = 0; displayCol < 8; displayCol++) {
-                // Map display coordinates to actual board coordinates
                 let actualRow, actualCol;
                 
                 if (isWhitePlayer) {
-                    // White player: display row 0 = actual row 7 (top of board = black side)
-                    // display row 7 = actual row 0 (bottom of board = white side)
+                    // White: display row 0 = actual row 7 (opponent's back rank)
+                    // display row 7 = actual row 0 (your back rank)
                     actualRow = 7 - displayRow;
                     actualCol = displayCol;
                 } else {
-                    // Black player: display row 0 = actual row 0 (top of board = white side)
-                    // display row 7 = actual row 7 (bottom of board = black side)
-                    // Also mirror columns horizontally
+                    // Black: display row 0 = actual row 0 (opponent's back rank)
+                    // display row 7 = actual row 7 (your back rank)
                     actualRow = displayRow;
                     actualCol = 7 - displayCol;
                 }
@@ -872,13 +862,20 @@
     }
     
     function updateGameStatus(room) {
+        const isMyTurnNow = (room.turn === currentPlayerSide) && !room.gameOver;
         const turnName = room.turn === 'white' ? '⚪ White / Red' : '⚫ Black';
-        const isMyTurn = (room.turn === currentPlayerSide) && !room.gameOver;
-        document.getElementById('turnDisplay').innerHTML = `${turnName} to move ${isMyTurn ? '(YOUR TURN)' : ''}`;
         
-        if (!room.gameOver && !isMyTurn) {
-            document.getElementById('gameMessage').innerHTML = '⏳ Waiting for opponent...';
-        } else if (!room.gameOver) {
+        if (room.gameOver) {
+            document.getElementById('turnDisplay').innerHTML = `Game Over`;
+        } else if (isMyTurnNow) {
+            document.getElementById('turnDisplay').innerHTML = `${turnName} to move - 🔥 YOUR TURN! 🔥`;
+        } else {
+            document.getElementById('turnDisplay').innerHTML = `${turnName} to move - Waiting for opponent...`;
+        }
+        
+        if (!room.gameOver && !isMyTurnNow) {
+            document.getElementById('gameMessage').innerHTML = '⏳ Waiting for opponent to move...';
+        } else if (!room.gameOver && isMyTurnNow) {
             document.getElementById('gameMessage').innerHTML = '👆 Tap a piece to move';
         }
     }
@@ -897,7 +894,7 @@
         document.getElementById('gameSubtitle').innerHTML = `You are ${yourSideName} (your pieces at bottom)`;
     }
     
-    // ==================== MOVE VALIDATION & EXECUTION ====================
+    // ==================== MOVE VALIDATION ====================
     function getValidMoves(row, col, boardState, mode, playerSide) {
         const piece = boardState[row][col];
         if (!piece) return [];
@@ -928,7 +925,6 @@
                 }
             }
         } else {
-            // Chess moves
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     if (dr === 0 && dc === 0) continue;
@@ -957,7 +953,6 @@
                 }
             }
             
-            // Pawn special moves
             if (piece.type === 'p') {
                 const dir = piece.color === 'w' ? -1 : 1;
                 const startRow = piece.color === 'w' ? 6 : 1;
@@ -984,7 +979,6 @@
                 }
             }
             
-            // Knight moves
             if (piece.type === 'n') {
                 const knightMoves = [
                     [-2, -1], [-2, 1], [-1, -2], [-1, 2],
@@ -1008,7 +1002,7 @@
     
     async function handleSquareClick(row, col) {
         if (!myTurn) {
-            document.getElementById('gameMessage').innerHTML = '⏳ Not your turn!';
+            document.getElementById('gameMessage').innerHTML = '⏳ Not your turn! Waiting for opponent...';
             return;
         }
         
@@ -1019,7 +1013,7 @@
                 return;
             }
             if (piece.color !== currentPlayerSide) {
-                document.getElementById('gameMessage').innerHTML = `❌ That's not your piece! You are ${currentPlayerSide === 'white' ? 'White/Red' : 'Black'}`;
+                document.getElementById('gameMessage').innerHTML = `❌ That's not your piece! You are ${currentPlayerSide === 'white' ? 'White' : 'Black'}`;
                 return;
             }
             selectedSquare = { row, col };
@@ -1052,21 +1046,17 @@
         
         if (!piece || piece.color !== currentPlayerSide) return;
         
-        // Execute move
         newBoard[toRow][toCol] = newBoard[fromRow][fromCol];
         newBoard[fromRow][fromCol] = null;
         
-        // Pawn promotion
         if (piece.type === 'p' && (toRow === 0 || toRow === 7)) {
             newBoard[toRow][toCol] = { type: 'q', color: piece.color };
         }
         
-        // King promotion for checkers
         if (piece.type === 'checker' && ((piece.color === 'w' && toRow === 0) || (piece.color === 'b' && toRow === 7))) {
             newBoard[toRow][toCol].king = true;
         }
         
-        // Win conditions
         let gameOver = false;
         let winner = null;
         
