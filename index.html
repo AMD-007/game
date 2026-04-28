@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Multiplayer Game Arena - Fixed</title>
+    <title>Multiplayer Game Arena - 6 Games</title>
     <style>
         * {
             margin: 0;
@@ -22,7 +22,7 @@
 
         .screen {
             display: none;
-            max-width: 550px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
@@ -63,6 +63,8 @@
             border-radius: 60px;
             font-size: 16px;
             cursor: pointer;
+            transition: all 0.1s;
+            font-family: inherit;
             width: 100%;
             text-align: center;
         }
@@ -82,7 +84,7 @@
 
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -93,6 +95,7 @@
             padding: 12px;
             text-align: center;
             cursor: pointer;
+            transition: all 0.2s;
             border: 2px solid transparent;
         }
 
@@ -103,13 +106,13 @@
 
         .game-option .game-icon {
             font-size: 32px;
+            margin-bottom: 6px;
         }
 
         .game-option .game-name {
             color: white;
             font-weight: 600;
-            font-size: 11px;
-            margin-top: 4px;
+            font-size: 12px;
         }
 
         .side-grid {
@@ -125,6 +128,7 @@
             padding: 12px;
             text-align: center;
             cursor: pointer;
+            transition: all 0.2s;
             border: 2px solid transparent;
         }
 
@@ -135,6 +139,7 @@
 
         .side-option .side-icon {
             font-size: 28px;
+            margin-bottom: 6px;
         }
 
         .side-option .side-name {
@@ -182,9 +187,9 @@
         }
 
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #2a2a3e;
+            width: 50px;
+            height: 50px;
+            border: 4px solid #2a2a3e;
             border-top-color: #ffd700;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -208,7 +213,7 @@
             width: 100%;
             aspect-ratio: 1 / 1;
             background: #f0d9b5;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
         }
 
@@ -228,17 +233,33 @@
             }
         }
 
+        .square .red-king {
+            color: #e74c3c;
+            text-shadow: 0 0 6px #ff0000;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .square .black-king {
+            color: #1a1a2e;
+            text-shadow: 0 0 6px #4a4a6a;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
         .square.light { background-color: #f0d9b5; }
         .square.dark { background-color: #b58863; }
         .square.selected { background: linear-gradient(135deg, #6f9e4f, #4a7a2e); box-shadow: inset 0 0 0 2px #ffd700; }
-        .square.valid-move::after { content: ""; position: absolute; width: 25%; height: 25%; background: #4caf50; border-radius: 50%; opacity: 0.8; pointer-events: none; }
-        .square.capture::after { background: #ff5722; width: 55%; height: 55%; border-radius: 8px; }
+        .square.valid-move::after { content: "●"; position: absolute; font-size: 20px; color: #4caf50; opacity: 0.8; pointer-events: none; }
+        .square.capture::after { content: "●"; color: #ff5722; font-size: 28px; }
+        .square.in-check::before { content: ""; position: absolute; inset: -2px; background: radial-gradient(circle, rgba(192,57,43,0.5), rgba(192,57,43,0.2)); border-radius: 4px; pointer-events: none; }
 
         .game-status {
             background: #16162a;
             border-radius: 60px;
             padding: 14px;
             text-align: center;
+            margin-bottom: 16px;
         }
 
         .game-status .turn {
@@ -248,7 +269,7 @@
         }
 
         .game-status .message {
-            font-size: 11px;
+            font-size: 12px;
             color: #aaa;
             margin-top: 6px;
         }
@@ -262,8 +283,10 @@
             font-size: 12px;
         }
 
-        .your-side { color: #ffd700; font-weight: bold; }
-        .opponent-side { color: #aaa; }
+        .player-info .your-side {
+            color: #ffd700;
+            font-weight: bold;
+        }
 
         footer {
             text-align: center;
@@ -298,9 +321,10 @@
         
         <div class="input-group">
             <label>Your Name</label>
-            <input type="text" id="playerNameCreate" placeholder="Enter your name">
+            <input type="text" id="playerNameCreate" placeholder="Enter your name" maxlength="20">
         </div>
         
+        <label>Select Game</label>
         <div class="game-grid" id="gameSelectCreate">
             <div class="game-option" data-game="standard"><div class="game-icon">♔</div><div class="game-name">Chess</div></div>
             <div class="game-option" data-game="chess960"><div class="game-icon">🎲</div><div class="game-name">Chess960</div></div>
@@ -310,6 +334,7 @@
             <div class="game-option" data-game="anticheckers"><div class="game-icon">💀</div><div class="game-name">Anti</div></div>
         </div>
         
+        <label>Choose Your Side</label>
         <div class="side-grid" id="sideSelectCreate">
             <div class="side-option" data-side="white"><div class="side-icon">⚪</div><div class="side-name">White/Red</div></div>
             <div class="side-option" data-side="black"><div class="side-icon">⚫</div><div class="side-name">Black</div></div>
@@ -332,7 +357,7 @@
         
         <div class="input-group">
             <label>Your Name</label>
-            <input type="text" id="playerNameJoin" placeholder="Enter your name">
+            <input type="text" id="playerNameJoin" placeholder="Enter your name" maxlength="20">
         </div>
         
         <div class="input-group">
@@ -346,7 +371,7 @@
     </div>
 </div>
 
-<!-- SCREEN 4: WAITING -->
+<!-- SCREEN 4: WAITING ROOM -->
 <div id="waitingScreen" class="screen">
     <div class="card">
         <div class="card-header">
@@ -356,13 +381,13 @@
         <div class="room-code" id="roomCodeDisplay"></div>
         <div class="waiting-info">
             <div class="spinner"></div>
-            <p style="color:#aaa; margin-top:12px;">Waiting for player to join...</p>
+            <p style="color: #aaa; margin-top: 16px;">Waiting for player to join...</p>
         </div>
         <button class="btn btn-danger" onclick="leaveRoom()">Leave Room</button>
     </div>
 </div>
 
-<!-- SCREEN 5: GAME -->
+<!-- SCREEN 5: GAME SCREEN -->
 <div id="gameScreen" class="screen">
     <div class="card">
         <div class="card-header">
@@ -379,7 +404,7 @@
         </div>
         <button class="btn btn-danger" onclick="leaveGame()">Leave Game</button>
     </div>
-    <footer>💀 Anti = Lose all pieces | 🏔️ Hill = king to center</footer>
+    <footer>💀 Anti = Lose all pieces to win | 🏔️ Hill = king to center</footer>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -398,10 +423,11 @@
         appId: "1:550870350070:web:292fdd7696b3a8c59a94d7"
     };
     
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     
-    // ==================== GLOBAL ====================
+    // ==================== GLOBAL STATE ====================
     let currentRoomId = null;
     let currentPlayerId = null;
     let currentPlayerSide = null;
@@ -412,9 +438,8 @@
     let selectedSquare = null;
     let validMoves = [];
     let myTurn = false;
-    let gameOver = false;
     
-    // ==================== UI ====================
+    // ==================== UI SCREENS ====================
     function showHome() {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('homeScreen').classList.add('active');
@@ -423,11 +448,14 @@
     function showCreateRoom() {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('createScreen').classList.add('active');
+        document.getElementById('playerNameCreate').value = '';
     }
     
     function showJoinRoom() {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('joinScreen').classList.add('active');
+        document.getElementById('playerNameJoin').value = '';
+        document.getElementById('roomCodeJoin').value = '';
     }
     
     function showWaiting(roomCode) {
@@ -439,9 +467,10 @@
     function showGame() {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('gameScreen').classList.add('active');
+        setTimeout(() => renderBoard(), 100);
     }
     
-    // ==================== SELECTION ====================
+    // ==================== GAME SELECTION ====================
     let selectedGame = 'standard';
     let selectedSide = 'white';
     
@@ -461,82 +490,25 @@
         });
     });
     
+    // Select defaults
     document.querySelector('#gameSelectCreate .game-option').classList.add('selected');
     document.querySelector('#sideSelectCreate .side-option').classList.add('selected');
     
-    // ==================== INITIAL BOARD ====================
-    function getInitialBoard(mode) {
-        const board = Array(8).fill().map(() => Array(8).fill(null));
-        
-        if (mode === 'checkers' || mode === 'anticheckers') {
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if ((r + c) % 2 === 1) {
-                        if (r < 3) board[r][c] = { type: 'checker', color: 'b', king: false };
-                        if (r > 4) board[r][c] = { type: 'checker', color: 'w', king: false };
-                    }
-                }
-            }
-            return board;
-        }
-        
-        if (mode === 'horde') {
-            const blackPieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
-            for (let i = 0; i < 8; i++) {
-                board[0][i] = { type: blackPieces[i], color: 'b' };
-                board[1][i] = { type: 'p', color: 'b' };
-            }
-            for (let i = 0; i < 8; i++) {
-                board[7][i] = { type: 'p', color: 'w' };
-                board[6][i] = { type: 'p', color: 'w' };
-                board[5][i] = { type: 'p', color: 'w' };
-                board[4][i] = { type: 'p', color: 'w' };
-            }
-            const row3 = [false, true, true, false, false, true, true, false];
-            for (let i = 0; i < 8; i++) {
-                if (row3[i]) board[3][i] = { type: 'p', color: 'w' };
-            }
-            return board;
-        }
-        
-        // Chess modes
-        for (let i = 0; i < 8; i++) {
-            board[1][i] = { type: 'p', color: 'b' };
-            board[6][i] = { type: 'p', color: 'w' };
-        }
-        
-        const pieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
-        if (mode === 'chess960') {
-            const randomRow = [...pieces];
-            for (let i = randomRow.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [randomRow[i], randomRow[j]] = [randomRow[j], randomRow[i]];
-            }
-            for (let i = 0; i < 8; i++) {
-                board[0][i] = { type: randomRow[i], color: 'b' };
-                board[7][i] = { type: randomRow[i], color: 'w' };
-            }
-        } else {
-            for (let i = 0; i < 8; i++) {
-                board[0][i] = { type: pieces[i], color: 'b' };
-                board[7][i] = { type: pieces[i], color: 'w' };
-            }
-        }
-        return board;
-    }
-    
-    // ==================== ROOM FUNCTIONS ====================
+    // ==================== ROOM MANAGEMENT ====================
     function generateRoomCode() {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
     
     function generatePlayerId() {
-        return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
     }
     
     async function createRoom() {
         const playerName = document.getElementById('playerNameCreate').value.trim();
-        if (!playerName) { alert('Enter your name'); return; }
+        if (!playerName) {
+            alert('Please enter your name');
+            return;
+        }
         
         const roomCode = generateRoomCode();
         const playerId = generatePlayerId();
@@ -545,72 +517,205 @@
         currentGameMode = selectedGame;
         
         let finalSide = selectedSide;
-        if (selectedSide === 'random') finalSide = Math.random() < 0.5 ? 'white' : 'black';
+        if (selectedSide === 'random') {
+            finalSide = Math.random() < 0.5 ? 'white' : 'black';
+        }
         currentPlayerSide = finalSide;
         opponentSide = currentPlayerSide === 'white' ? 'black' : 'white';
+        
+        const initialGameState = getInitialGameState(selectedGame);
         
         const roomData = {
             roomCode: roomCode,
             gameMode: selectedGame,
+            createdAt: Date.now(),
             status: 'waiting',
             players: {
-                [playerId]: { name: playerName, side: finalSide, connected: true }
+                [playerId]: {
+                    name: playerName,
+                    side: finalSide,
+                    connected: true
+                }
             },
-            gameState: getInitialBoard(selectedGame),
+            gameState: initialGameState,
             turn: 'white',
             gameOver: false,
             winner: null
         };
         
-        await database.ref('rooms/' + roomCode).set(roomData);
-        listenForGameStart(roomCode, playerId);
-        showWaiting(roomCode);
+        try {
+            await database.ref('rooms/' + roomCode).set(roomData);
+            listenForGameStart(roomCode, playerId);
+            showWaiting(roomCode);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to create room. Check Firebase config.');
+        }
     }
     
     async function joinRoom() {
         const playerName = document.getElementById('playerNameJoin').value.trim();
         const roomCode = document.getElementById('roomCodeJoin').value.trim();
         
-        if (!playerName) { alert('Enter your name'); return; }
-        if (!roomCode || roomCode.length !== 6) { alert('Enter valid 6-digit code'); return; }
+        if (!playerName) {
+            alert('Please enter your name');
+            return;
+        }
         
-        const snapshot = await database.ref('rooms/' + roomCode).get();
-        if (!snapshot.exists()) { alert('Room not found'); return; }
+        if (!roomCode || roomCode.length !== 6) {
+            alert('Please enter a valid 6-digit room code');
+            return;
+        }
+        
+        const roomRef = database.ref('rooms/' + roomCode);
+        const snapshot = await roomRef.get();
+        
+        if (!snapshot.exists()) {
+            alert('Room not found');
+            return;
+        }
         
         const room = snapshot.val();
-        if (room.status !== 'waiting') { alert('Game already started'); return; }
-        if (Object.keys(room.players).length >= 2) { alert('Room is full'); return; }
+        
+        if (room.status !== 'waiting') {
+            alert('Game already in progress');
+            return;
+        }
+        
+        const playerCount = Object.keys(room.players).length;
+        if (playerCount >= 2) {
+            alert('Room is full');
+            return;
+        }
         
         const playerId = generatePlayerId();
         currentRoomId = roomCode;
         currentPlayerId = playerId;
         currentGameMode = room.gameMode;
         
-        const existingPlayer = Object.values(room.players)[0];
+        const existingPlayerId = Object.keys(room.players)[0];
+        const existingPlayer = room.players[existingPlayerId];
+        
         currentPlayerSide = existingPlayer.side === 'white' ? 'black' : 'white';
         opponentSide = existingPlayer.side;
         opponentName = existingPlayer.name;
         
-        await database.ref('rooms/' + roomCode).update({
-            [`players/${playerId}`]: { name: playerName, side: currentPlayerSide, connected: true },
-            status: 'playing'
-        });
+        const playerUpdate = {
+            [`rooms/${roomCode}/players/${playerId}`]: {
+                name: playerName,
+                side: currentPlayerSide,
+                connected: true
+            },
+            [`rooms/${roomCode}/status`]: 'playing'
+        };
+        
+        await database.ref().update(playerUpdate);
         
         listenForGameUpdates(roomCode, playerId);
         showGame();
         updateGameTitle();
     }
     
-    function listenForGameStart(roomCode, playerId) {
-        database.ref('rooms/' + roomCode).on('value', (snap) => {
-            const room = snap.val();
-            if (room && room.status === 'playing') {
-                const otherId = Object.keys(room.players).find(id => id !== playerId);
-                if (otherId) {
-                    opponentName = room.players[otherId].name;
-                    opponentSide = room.players[otherId].side;
+    // ==================== INITIAL GAME STATE ====================
+    function getInitialGameState(mode) {
+        if (mode === 'checkers' || mode === 'anticheckers') {
+            return initCheckersBoard();
+        } else if (mode === 'horde') {
+            return initHordeBoard();
+        } else {
+            return initChessBoard(mode);
+        }
+    }
+    
+    function initChessBoard(mode) {
+        const board = Array(8).fill().map(() => Array(8).fill(null));
+        
+        for (let i = 0; i < 8; i++) {
+            board[1][i] = { type: 'p', color: 'b' };
+            board[6][i] = { type: 'p', color: 'w' };
+        }
+        
+        if (mode === 'standard' || mode === 'kinghill') {
+            const pieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+            for (let i = 0; i < 8; i++) {
+                board[0][i] = { type: pieces[i], color: 'b' };
+                board[7][i] = { type: pieces[i], color: 'w' };
+            }
+        } else if (mode === 'chess960') {
+            const whiteRow = generateChess960Position();
+            const blackRow = [...whiteRow];
+            for (let i = 0; i < 8; i++) {
+                board[0][i] = { type: blackRow[i], color: 'b' };
+                board[7][i] = { type: whiteRow[i], color: 'w' };
+            }
+        }
+        return board;
+    }
+    
+    function generateChess960Position() {
+        let pieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        let valid = false;
+        while (!valid) {
+            for (let i = pieces.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+            }
+            const kingPos = pieces.indexOf('k');
+            const rookPos = pieces.map((p, idx) => p === 'r' ? idx : -1).filter(i => i !== -1);
+            const bishopPos = pieces.map((p, idx) => p === 'b' ? idx : -1).filter(i => i !== -1);
+            valid = rookPos[0] < kingPos && kingPos < rookPos[1] && (bishopPos[0] % 2) !== (bishopPos[1] % 2);
+        }
+        return pieces;
+    }
+    
+    function initHordeBoard() {
+        const board = Array(8).fill().map(() => Array(8).fill(null));
+        
+        const blackPieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        for (let i = 0; i < 8; i++) {
+            board[0][i] = { type: blackPieces[i], color: 'b' };
+            board[1][i] = { type: 'p', color: 'b' };
+        }
+        
+        for (let i = 0; i < 8; i++) {
+            board[7][i] = { type: 'p', color: 'w' };
+            board[6][i] = { type: 'p', color: 'w' };
+            board[5][i] = { type: 'p', color: 'w' };
+            board[4][i] = { type: 'p', color: 'w' };
+        }
+        
+        const row3Pattern = [false, true, true, false, false, true, true, false];
+        for (let i = 0; i < 8; i++) {
+            if (row3Pattern[i]) board[3][i] = { type: 'p', color: 'w' };
+        }
+        return board;
+    }
+    
+    function initCheckersBoard() {
+        const board = Array(8).fill().map(() => Array(8).fill(null));
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                if ((row + col) % 2 === 1) {
+                    if (row < 3) board[row][col] = { type: 'checker', color: 'b', king: false };
+                    if (row > 4) board[row][col] = { type: 'checker', color: 'w', king: false };
                 }
-                database.ref('rooms/' + roomCode).off();
+            }
+        }
+        return board;
+    }
+    
+    // ==================== LISTENERS ====================
+    function listenForGameStart(roomCode, playerId) {
+        const roomRef = database.ref('rooms/' + roomCode);
+        roomRef.on('value', (snapshot) => {
+            const room = snapshot.val();
+            if (room && room.status === 'playing') {
+                const otherPlayerId = Object.keys(room.players).find(id => id !== playerId);
+                if (otherPlayerId) {
+                    opponentName = room.players[otherPlayerId].name;
+                    opponentSide = room.players[otherPlayerId].side;
+                }
+                roomRef.off();
                 listenForGameUpdates(roomCode, playerId);
                 showGame();
                 updateGameTitle();
@@ -619,30 +724,50 @@
     }
     
     function listenForGameUpdates(roomCode, playerId) {
-        database.ref('rooms/' + roomCode).on('value', (snap) => {
-            const room = snap.val();
+        const roomRef = database.ref('rooms/' + roomCode);
+        roomRef.on('value', (snapshot) => {
+            const room = snapshot.val();
             if (room) {
                 currentGameState = room.gameState;
                 myTurn = (room.turn === currentPlayerSide) && !room.gameOver;
-                gameOver = room.gameOver;
                 renderBoard();
-                updateUI(room);
+                updateGameStatus(room);
+                updatePlayerInfo(room);
+                
+                if (room.gameOver) {
+                    if (room.winner === currentPlayerSide) {
+                        document.getElementById('gameMessage').innerHTML = '🏆 YOU WIN! 🏆';
+                    } else if (room.winner) {
+                        document.getElementById('gameMessage').innerHTML = '🏆 OPPONENT WINS! 🏆';
+                    } else {
+                        document.getElementById('gameMessage').innerHTML = '♟️ GAME DRAW! ♟️';
+                    }
+                }
             }
         });
     }
     
+    function updatePlayerInfo(room) {
+        const yourDisplay = currentPlayerSide === 'white' ? '⚪ White/Red (bottom)' : '⚫ Black (bottom)';
+        const opponentDisplay = opponentSide === 'white' ? '⚪ White/Red (top)' : '⚫ Black (top)';
+        document.getElementById('playerInfo').innerHTML = `🎮 You: ${yourDisplay} | 👤 ${opponentName || 'Opponent'}: ${opponentDisplay}`;
+    }
+    
     // ==================== PIECE SYMBOLS ====================
+    const pieceSymbols = {
+        'wr': '♖', 'wn': '♘', 'wb': '♗', 'wq': '♕', 'wk': '♔', 'wp': '♙',
+        'br': '♜', 'bn': '♞', 'bb': '♝', 'bq': '♛', 'bk': '♚', 'bp': '♟'
+    };
+    
     function getPieceDisplay(piece) {
         if (!piece) return '';
         if (piece.type === 'checker') {
-            if (piece.king) return piece.color === 'w' ? '👑' : '👑';
+            if (piece.king) {
+                return piece.color === 'w' ? '👑' : '👑';
+            }
             return piece.color === 'w' ? '🔴' : '⚫';
         }
-        const symbols = {
-            'wr': '♖', 'wn': '♘', 'wb': '♗', 'wq': '♕', 'wk': '♔', 'wp': '♙',
-            'br': '♜', 'bn': '♞', 'bb': '♝', 'bq': '♛', 'bk': '♚', 'bp': '♟'
-        };
-        return symbols[(piece.color === 'w' ? 'w' : 'b') + piece.type] || '';
+        return pieceSymbols[(piece.color === 'w' ? 'w' : 'b') + piece.type] || '';
     }
     
     // ==================== RENDER BOARD ====================
@@ -650,14 +775,16 @@
         if (!currentGameState) return;
         
         const container = document.getElementById('gameBoard');
+        if (!container) return;
         container.innerHTML = '';
         
-        const isWhite = currentPlayerSide === 'white';
+        const isWhitePlayer = currentPlayerSide === 'white';
         
         for (let displayRow = 0; displayRow < 8; displayRow++) {
             for (let displayCol = 0; displayCol < 8; displayCol++) {
                 let actualRow, actualCol;
-                if (isWhite) {
+                
+                if (isWhitePlayer) {
                     actualRow = 7 - displayRow;
                     actualCol = displayCol;
                 } else {
@@ -681,33 +808,65 @@
                 }
                 
                 square.textContent = getPieceDisplay(piece);
-                square.addEventListener('click', () => handleSquareClick(actualRow, actualCol));
+                
+                square.addEventListener('click', (function(r, c) {
+                    return function() { handleSquareClick(r, c); };
+                })(actualRow, actualCol));
+                
                 container.appendChild(square);
             }
         }
     }
     
-    // ==================== MOVE LOGIC ====================
-    function getValidMoves(row, col, board, mode, playerSide) {
-        const piece = board[row][col];
-        if (!piece || piece.color !== playerSide) return [];
+    function updateGameStatus(room) {
+        const turnName = room.turn === 'white' ? 'White/Red' : 'Black';
+        const isMyTurn = (room.turn === currentPlayerSide) && !room.gameOver;
+        document.getElementById('turnDisplay').innerHTML = `${turnName} to move ${isMyTurn ? '(YOUR TURN)' : ''}`;
+        
+        if (!room.gameOver && !isMyTurn) {
+            document.getElementById('gameMessage').innerHTML = '⏳ Waiting for opponent...';
+        } else if (!room.gameOver) {
+            document.getElementById('gameMessage').innerHTML = '👆 Tap a piece to move';
+        }
+    }
+    
+    function updateGameTitle() {
+        const modeNames = {
+            standard: '♔ Standard Chess',
+            chess960: '🎲 Chess960',
+            kinghill: '🏔️ King of the Hill',
+            horde: '⚔️ Horde Chess',
+            checkers: '🔴 Checkers',
+            anticheckers: '💀 Anti-Checkers'
+        };
+        document.getElementById('gameTitle').innerHTML = modeNames[currentGameMode];
+        document.getElementById('gameSubtitle').innerHTML = `You are ${currentPlayerSide === 'white' ? 'White/Red' : 'Black'} (your pieces at bottom)`;
+    }
+    
+    // ==================== MOVE VALIDATION ====================
+    function getValidMoves(row, col, boardState, mode, playerSide) {
+        const piece = boardState[row][col];
+        if (!piece) return [];
         
         const moves = [];
         
         if (mode === 'checkers' || mode === 'anticheckers') {
             const dir = piece.color === 'w' ? -1 : 1;
-            const dirs = piece.king ? [-1, 1] : [dir];
+            const isKing = piece.king;
+            const dirs = isKing ? [-1, 1] : [dir];
+            
             for (const dr of dirs) {
                 for (const dc of [-1, 1]) {
                     const newRow = row + dr;
                     const newCol = col + dc;
                     if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                        if (!board[newRow][newCol]) {
+                        const target = boardState[newRow][newCol];
+                        if (!target) {
                             moves.push({ row: newRow, col: newCol });
-                        } else if (board[newRow][newCol].color !== piece.color) {
+                        } else if (target.color !== piece.color) {
                             const jumpRow = newRow + dr;
                             const jumpCol = newCol + dc;
-                            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8 && !board[jumpRow][jumpCol]) {
+                            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8 && !boardState[jumpRow][jumpCol]) {
                                 moves.push({ row: jumpRow, col: jumpCol });
                             }
                         }
@@ -717,44 +876,37 @@
             return moves;
         }
         
-        // Chess moves (simplified but functional)
-        const directions = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-        for (const [dr, dc] of directions) {
-            let newRow = row + dr;
-            let newCol = col + dc;
-            let steps = (piece.type === 'k') ? 1 : (piece.type === 'n') ? 1 : 7;
-            for (let s = 0; s < steps; s++) {
-                if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
-                const target = board[newRow][newCol];
-                if (!target) {
-                    moves.push({ row: newRow, col: newCol });
-                } else {
-                    if (target.color !== piece.color) moves.push({ row: newRow, col: newCol });
-                    break;
+        // Chess moves - simple pawn and piece movement
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                const newRow = row + dr;
+                const newCol = col + dc;
+                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                    const target = boardState[newRow][newCol];
+                    if (!target || target.color !== piece.color) {
+                        moves.push({ row: newRow, col: newCol });
+                    }
                 }
-                if (piece.type === 'n') break;
-                newRow += dr;
-                newCol += dc;
             }
         }
         
-        // Pawn moves
+        // Pawn special
         if (piece.type === 'p') {
             const dir = piece.color === 'w' ? -1 : 1;
-            const startRow = piece.color === 'w' ? 6 : 1;
-            const forward = row + dir;
-            if (forward >= 0 && forward < 8 && !board[forward][col]) {
-                moves.push({ row: forward, col });
-                if (row === startRow && !board[forward + dir][col]) {
-                    moves.push({ row: forward + dir, col });
-                }
+            const forwardRow = row + dir;
+            if (forwardRow >= 0 && forwardRow < 8 && !boardState[forwardRow][col]) {
+                moves.push({ row: forwardRow, col });
             }
             for (const dc of [-1, 1]) {
                 const newCol = col + dc;
                 if (newCol >= 0 && newCol < 8) {
                     const newRow = row + dir;
-                    if (newRow >= 0 && newRow < 8 && board[newRow][newCol] && board[newRow][newCol].color !== piece.color) {
-                        moves.push({ row: newRow, col: newCol });
+                    if (newRow >= 0 && newRow < 8) {
+                        const target = boardState[newRow][newCol];
+                        if (target && target.color !== piece.color) {
+                            moves.push({ row: newRow, col: newCol });
+                        }
                     }
                 }
             }
@@ -767,7 +919,7 @@
                 const newRow = row + dr;
                 const newCol = col + dc;
                 if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                    const target = board[newRow][newCol];
+                    const target = boardState[newRow][newCol];
                     if (!target || target.color !== piece.color) {
                         moves.push({ row: newRow, col: newCol });
                     }
@@ -779,26 +931,31 @@
     }
     
     async function handleSquareClick(row, col) {
-        if (!myTurn || gameOver) {
+        if (!myTurn) {
             document.getElementById('gameMessage').innerHTML = '⏳ Not your turn!';
             return;
         }
         
         if (!selectedSquare) {
             const piece = currentGameState[row][col];
-            if (!piece) { document.getElementById('gameMessage').innerHTML = 'Empty square'; return; }
-            if (piece.color !== currentPlayerSide) { document.getElementById('gameMessage').innerHTML = 'Not your piece!'; return; }
-            
+            if (!piece) {
+                document.getElementById('gameMessage').innerHTML = '⬜ Empty square';
+                return;
+            }
+            if (piece.color !== currentPlayerSide) {
+                document.getElementById('gameMessage').innerHTML = `❌ Not your piece! You are ${currentPlayerSide === 'white' ? 'White' : 'Black'}`;
+                return;
+            }
             selectedSquare = { row, col };
             validMoves = getValidMoves(row, col, currentGameState, currentGameMode, currentPlayerSide);
             renderBoard();
-            document.getElementById('gameMessage').innerHTML = `Selected ${String.fromCharCode(97+col)}${8-row}. Tap a highlighted square.`;
+            document.getElementById('gameMessage').innerHTML = `✅ Selected`;
         } else {
             const isValid = validMoves.some(m => m.row === row && m.col === col);
             if (isValid) {
                 await makeMove(selectedSquare.row, selectedSquare.col, row, col);
             } else {
-                document.getElementById('gameMessage').innerHTML = 'Invalid move!';
+                document.getElementById('gameMessage').innerHTML = '❌ Invalid move!';
             }
             selectedSquare = null;
             validMoves = [];
@@ -808,11 +965,15 @@
     
     async function makeMove(fromRow, fromCol, toRow, toCol) {
         const roomRef = database.ref('rooms/' + currentRoomId);
-        const room = (await roomRef.get()).val();
-        if (!room || room.gameOver || room.turn !== currentPlayerSide) return;
+        const snapshot = await roomRef.get();
+        const room = snapshot.val();
+        
+        if (!room || room.gameOver) return;
+        if (room.turn !== currentPlayerSide) return;
         
         const newBoard = JSON.parse(JSON.stringify(room.gameState));
         const piece = newBoard[fromRow][fromCol];
+        
         if (!piece || piece.color !== currentPlayerSide) return;
         
         newBoard[toRow][toCol] = newBoard[fromRow][fromCol];
@@ -826,11 +987,11 @@
             newBoard[toRow][toCol].king = true;
         }
         
-        let gameOverFlag = false;
+        let gameOver = false;
         let winner = null;
         
         if (currentGameMode === 'kinghill' && piece.type === 'k' && toRow >= 3 && toRow <= 4 && toCol >= 3 && toCol <= 4) {
-            gameOverFlag = true;
+            gameOver = true;
             winner = currentPlayerSide;
         }
         
@@ -839,44 +1000,30 @@
         await roomRef.update({
             gameState: newBoard,
             turn: newTurn,
-            gameOver: gameOverFlag,
+            gameOver: gameOver,
             winner: winner
         });
         
         myTurn = false;
-        document.getElementById('gameMessage').innerHTML = 'Move sent! Waiting for opponent...';
+        document.getElementById('gameMessage').innerHTML = '📡 Move sent! Waiting for opponent...';
     }
     
-    function updateUI(room) {
-        const turnName = room.turn === 'white' ? '⚪ White/Red' : '⚫ Black';
-        const isMyTurn = (room.turn === currentPlayerSide) && !room.gameOver;
-        document.getElementById('turnDisplay').innerHTML = `${turnName} to move ${isMyTurn ? '(YOUR TURN)' : ''}`;
-        
-        const yourDisplay = currentPlayerSide === 'white' ? '⚪ White/Red (bottom)' : '⚫ Black (bottom)';
-        const oppDisplay = opponentSide === 'white' ? '⚪ White/Red (top)' : '⚫ Black (top)';
-        document.getElementById('playerInfo').innerHTML = `🎮 You: ${yourDisplay} | 👤 ${opponentName || 'Opponent'}: ${oppDisplay}`;
-        
-        if (room.gameOver) {
-            if (room.winner === currentPlayerSide) document.getElementById('gameMessage').innerHTML = '🏆 YOU WIN! 🏆';
-            else if (room.winner) document.getElementById('gameMessage').innerHTML = '🏆 OPPONENT WINS! 🏆';
-            else document.getElementById('gameMessage').innerHTML = 'Draw!';
-        }
-    }
-    
-    function updateGameTitle() {
-        const names = { standard:'♔ Chess', chess960:'🎲 Chess960', kinghill:'🏔️ King Hill', horde:'⚔️ Horde', checkers:'🔴 Checkers', anticheckers:'💀 Anti' };
-        const sideName = currentPlayerSide === 'white' ? 'White/Red' : 'Black';
-        document.getElementById('gameTitle').innerHTML = names[currentGameMode];
-        document.getElementById('gameSubtitle').innerHTML = `You are ${sideName} (your pieces at bottom)`;
-    }
-    
+    // ==================== LEAVE ROOM ====================
     async function leaveRoom() {
-        if (currentRoomId) await database.ref('rooms/' + currentRoomId).remove();
+        if (currentRoomId) {
+            await database.ref('rooms/' + currentRoomId).remove();
+        }
         currentRoomId = null;
+        currentPlayerId = null;
+        currentPlayerSide = null;
+        selectedSquare = null;
+        validMoves = [];
         showHome();
     }
     
-    function leaveGame() { leaveRoom(); }
+    function leaveGame() {
+        leaveRoom();
+    }
 </script>
 </body>
 </html>
