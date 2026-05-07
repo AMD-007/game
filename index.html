@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="MaxPlay — 8 classic board games, multiplayer. By MaxMin.">
-<title>MaxPlay v1778123026</title>
+<title>MaxPlay v1778125427</title>
 <style>
 /* ════════════════════════════════════════════════════════
    MaxPlay — game.css
@@ -687,16 +687,21 @@ footer{
 </div>
 
 <script type="module">
+// ── Firebase CDN imports (must be at top of module) ──
+import { getDatabase, ref, set, get, update,
+         onValue, off, push, serverTimestamp,
+         onDisconnect } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+
+// ── MaxPlay Game Engine ──
+(async function() {
 'use strict';
 
-// ========================================================
-// state.js
-// ========================================================
+// ── state.js ──
 // ════════════════════════════════════════════════════════
 //  js/state.js — State management
 //  No DOM. No Firebase. Pure state.
 // ════════════════════════════════════════════════════════
-
 function mkBoard() {
   return Array(8).fill(null).map(() => Array(8).fill(null));
 }
@@ -794,32 +799,29 @@ function restoreState(G, snap, lmvEl) {
   lmvEl.innerHTML = snap.lmvHTML;
 }
 
-// ========================================================
-// chess.js
-// ========================================================
+// ── chess.js ──
 // ════════════════════════════════════════════════════════
 //  js/rules/chess.js — Chess rules engine
 //  Pure functions. No DOM. No side effects.
 //  Input: board state → Output: moves / booleans
 // ════════════════════════════════════════════════════════
-
 // Castling-disabled sentinels (used during attack checks to avoid recursion)
-const NO_CR  = {w:{k:false,q:false}, b:{k:false,q:false}};
-const NO_RSC = {w:{k:7,q:0}, b:{k:7,q:0}};
+var NO_CR  = {w:{k:false,q:false}, b:{k:false,q:false}};
+var NO_RSC = {w:{k:7,q:0}, b:{k:7,q:0}};
 
 // ── CHESS 960 GENERATOR (official SP# — all 960 positions valid) ──────
 function gen960() {
-  const sp  = Math.floor(Math.random() * 960);
-  const row = Array(8).fill(null);
+  var sp  = Math.floor(Math.random() * 960);
+  var row = Array(8).fill(null);
   row[(Math.floor(sp / 4) % 4) * 2 + 1] = 'b';
   row[(sp % 4) * 2]                      = 'b';
-  const e1 = freeSquares(row);
+  var e1 = freeSquares(row);
   row[e1[Math.floor(sp / 16) % 6]] = 'q';
-  const NC = [[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]];
-  const e2 = freeSquares(row);
-  const [na, nb] = NC[Math.floor(sp / 96) % 10];
+  var NC = [[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]];
+  var e2 = freeSquares(row);
+  var [na, nb] = NC[Math.floor(sp / 96) % 10];
   row[e2[na]] = 'n'; row[e2[nb]] = 'n';
-  const e3 = freeSquares(row);
+  var e3 = freeSquares(row);
   row[e3[0]] = 'r'; row[e3[1]] = 'k'; row[e3[2]] = 'r';
   return row;
 }
@@ -829,17 +831,17 @@ function freeSquares(row) {
 
 // ── RAW MOVE GENERATION (no king-safety filter) ───────────────────────
 function rawMoves(row, col, b, ep, cr, rsc) {
-  const p = b[row][col];
+  var p = b[row][col];
   if (!p || p.type === 'checker') return [];
-  const {type, color: c} = p, opp = c==='w'?'b':'w', ms = [];
-  const ok   = (r,cc) => r>=0&&r<8&&cc>=0&&cc<8;
-  const land = (r,cc) => ok(r,cc) && b[r][cc]?.color !== c;
+  var {type, color: c} = p, opp = c==='w'?'b':'w', ms = [];
+  var ok   = (r,cc) => r>=0&&r<8&&cc>=0&&cc<8;
+  var land = (r,cc) => ok(r,cc) && b[r][cc]?.color !== c;
 
   function slide(dirs) {
-    for (const [dr,dc] of dirs) {
-      let r=row+dr, cc=col+dc;
+    for (var [dr,dc] of dirs) {
+      var r=row+dr, cc=col+dc;
       while (ok(r,cc)) {
-        const t = b[r][cc];
+        var t = b[r][cc];
         if (!t) { ms.push({row:r,col:cc}); }
         else    { if (t.color===opp) ms.push({row:r,col:cc}); break; }
         r+=dr; cc+=dc;
@@ -848,13 +850,13 @@ function rawMoves(row, col, b, ep, cr, rsc) {
   }
 
   if (type==='p') {
-    const d=c==='w'?-1:1, sr=c==='w'?6:1;
+    var d=c==='w'?-1:1, sr=c==='w'?6:1;
     if (ok(row+d,col) && !b[row+d][col]) {
       ms.push({row:row+d, col});
       if (row===sr && !b[row+2*d][col]) ms.push({row:row+2*d, col, dp:true});
     }
-    for (const dc of [-1,1]) {
-      const nr=row+d, nc=col+dc;
+    for (var dc of [-1,1]) {
+      var nr=row+d, nc=col+dc;
       if (ok(nr,nc)) {
         if (b[nr][nc]?.color===opp)          ms.push({row:nr,col:nc});
         if (ep && ep.row===nr && ep.col===nc) ms.push({row:nr,col:nc,epCap:true});
@@ -862,26 +864,26 @@ function rawMoves(row, col, b, ep, cr, rsc) {
     }
   }
   else if (type==='n') {
-    for (const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])
+    for (var [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])
       if (land(row+dr,col+dc)) ms.push({row:row+dr,col:col+dc});
   }
   else if (type==='r') slide([[-1,0],[1,0],[0,-1],[0,1]]);
   else if (type==='b') slide([[-1,-1],[-1,1],[1,-1],[1,1]]);
   else if (type==='q') slide([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]);
   else if (type==='k') {
-    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++) {
+    for (var dr=-1;dr<=1;dr++) for (var dc=-1;dc<=1;dc++) {
       if (!dr&&!dc) continue;
       if (land(row+dr,col+dc)) ms.push({row:row+dr,col:col+dc});
     }
-    const br = c==='w'?7:0;
+    var br = c==='w'?7:0;
     if (row===br && cr?.[c]) {
-      const tryCastle = (side, dest, rTo) => {
+      var tryCastle = (side, dest, rTo) => {
         if (!cr[c][side]) return;
-        const rCol = rsc[c][side];
-        const rp   = b[br][rCol];
+        var rCol = rsc[c][side];
+        var rp   = b[br][rCol];
         if (!rp || rp.type!=='r' || rp.color!==c || rp.moved) return;
-        const lo=Math.min(col,rCol)+1, hi=Math.max(col,rCol)-1;
-        for (let cc=lo; cc<=hi; cc++) if (b[br][cc]) return;
+        var lo=Math.min(col,rCol)+1, hi=Math.max(col,rCol)-1;
+        for (var cc=lo; cc<=hi; cc++) if (b[br][cc]) return;
         ms.push({row:br, col:dest, castle:side, rFrom:rCol, rTo:rTo});
       };
       tryCastle('k', 6, 5);
@@ -893,8 +895,8 @@ function rawMoves(row, col, b, ep, cr, rsc) {
 
 // ── ATTACK DETECTION ──────────────────────────────────────────────────
 function isAttacked(row, col, byColor, b) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = b[r][c];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = b[r][c];
     if (p && p.color===byColor && p.type!=='checker')
       if (rawMoves(r,c,b,null,NO_CR,NO_RSC).some(m=>m.row===row&&m.col===col))
         return true;
@@ -903,25 +905,25 @@ function isAttacked(row, col, byColor, b) {
 }
 
 function findKing(color, b) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++)
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++)
     if (b[r][c]?.type==='k' && b[r][c].color===color) return {row:r,col:c};
   return null;
 }
 
 function inCheck(color, b) {
-  const k = findKing(color, b);
+  var k = findKing(color, b);
   return k ? isAttacked(k.row, k.col, color==='w'?'b':'w', b) : false;
 }
 
 // ── APPLY MOVE TO BOARD (mutates b) ───────────────────────────────────
 function applyChessMove(b, fr, fc, mv) {
-  const p = b[fr][fc];
+  var p = b[fr][fc];
   b[mv.row][mv.col] = p;
   b[fr][fc] = null;
   if (p) p.moved = true;
   if (mv.epCap) b[mv.row+(p.color==='w'?1:-1)][mv.col] = null;
   if (mv.castle) {
-    const rook = b[mv.row][mv.rFrom];
+    var rook = b[mv.row][mv.rFrom];
     b[mv.row][mv.rTo] = rook;
     b[mv.row][mv.rFrom] = null;
     if (rook) rook.moved = true;
@@ -930,26 +932,26 @@ function applyChessMove(b, fr, fc, mv) {
 
 // ── LEGAL MOVES (king-safety filtered) ───────────────────────────────
 function legalMoves(row, col, G) {
-  const p = G.board[row][col];
+  var p = G.board[row][col];
   if (!p || p.type==='checker') return [];
-  const c=p.color, opp=c==='w'?'b':'w';
+  var c=p.color, opp=c==='w'?'b':'w';
 
   // Horde: white has no king — all raw moves are legal
   if (G.mode==='horde' && c==='w')
     return rawMoves(row, col, G.board, G.ep, G.cr, G.rsc);
 
-  const cands = rawMoves(row, col, G.board, G.ep, G.cr, G.rsc);
-  const legal = [];
-  for (const mv of cands) {
+  var cands = rawMoves(row, col, G.board, G.ep, G.cr, G.rsc);
+  var legal = [];
+  for (var mv of cands) {
     if (mv.castle) {
-      const br      = c==='w'?7:0;
-      const passCol = mv.castle==='k'?5:3;
+      var br      = c==='w'?7:0;
+      var passCol = mv.castle==='k'?5:3;
       if (isAttacked(br, col,     opp, G.board)) continue;
       if (isAttacked(br, passCol, opp, G.board)) continue;
     }
-    const nb = cloneBoard(G.board);
+    var nb = cloneBoard(G.board);
     applyChessMove(nb, row, col, mv);
-    const kp = p.type==='k'
+    var kp = p.type==='k'
       ? {row:mv.row, col:mv.col}
       : findKing(c, nb);
     if (!kp || !isAttacked(kp.row, kp.col, opp, nb)) legal.push(mv);
@@ -959,9 +961,9 @@ function legalMoves(row, col, G) {
 
 // ── POSITION KEY (threefold repetition) ───────────────────────────────
 function posKey(G) {
-  let k = G.turn;
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = G.board[r][c];
+  var k = G.turn;
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = G.board[r][c];
     k += p ? p.color+p.type : '.';
   }
   k += (G.cr.w.k?'K':'_')+(G.cr.w.q?'Q':'_')+(G.cr.b.k?'k':'_')+(G.cr.b.q?'q':'_');
@@ -971,12 +973,12 @@ function posKey(G) {
 
 // ── CHECK GIVERS (for highlight) ──────────────────────────────────────
 function checkGivers(color, G) {
-  const k = findKing(color, G.board);
+  var k = findKing(color, G.board);
   if (!k) return [];
-  const opp = color==='w'?'b':'w';
-  const res = [];
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = G.board[r][c];
+  var opp = color==='w'?'b':'w';
+  var res = [];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = G.board[r][c];
     if (p?.color===opp && p.type!=='checker')
       if (rawMoves(r,c,G.board,null,NO_CR,NO_RSC).some(m=>m.row===k.row&&m.col===k.col))
         res.push({row:r,col:c});
@@ -986,37 +988,34 @@ function checkGivers(color, G) {
 
 // ── HAS ANY LEGAL CHESS MOVES ─────────────────────────────────────────
 function hasAnyChessMoves(color, G) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = G.board[r][c];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = G.board[r][c];
     if (p?.color===color && p.type!=='checker' && legalMoves(r,c,G).length>0)
       return true;
   }
   return false;
 }
 
-// ========================================================
-// checkers.js
-// ========================================================
+// ── checkers.js ──
 // ════════════════════════════════════════════════════════
 //  js/rules/checkers.js — Checkers rules engine
 //  Pure functions. No DOM. No side effects.
 // ════════════════════════════════════════════════════════
-
 // ── MOVE GENERATION ───────────────────────────────────────────────────
 function checkerMoves(row, col, b, capOnly=false) {
-  const p = b[row][col];
+  var p = b[row][col];
   if (!p || p.type!=='checker') return [];
-  const {color, king} = p;
-  const dirs = king ? [-1,1] : [color==='w'?-1:1];
-  const ms   = [];
-  for (const dr of dirs) for (const dc of [-1,1]) {
-    const nr=row+dr, nc=col+dc;
+  var {color, king} = p;
+  var dirs = king ? [-1,1] : [color==='w'?-1:1];
+  var ms   = [];
+  for (var dr of dirs) for (var dc of [-1,1]) {
+    var nr=row+dr, nc=col+dc;
     if (nr<0||nr>7||nc<0||nc>7) continue;
-    const t = b[nr][nc];
+    var t = b[nr][nc];
     if (!t && !capOnly) {
       ms.push({row:nr, col:nc, cap:null});
     } else if (t && t.color!==color) {
-      const jr=nr+dr, jc=nc+dc;
+      var jr=nr+dr, jc=nc+dc;
       if (jr>=0&&jr<8&&jc>=0&&jc<8 && !b[jr][jc])
         ms.push({row:jr, col:jc, cap:{row:nr,col:nc}});
     }
@@ -1026,8 +1025,8 @@ function checkerMoves(row, col, b, capOnly=false) {
 
 // ── FORCED CAPTURE CHECK ──────────────────────────────────────────────
 function anyCapture(color, b) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = b[r][c];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = b[r][c];
     if (p?.color===color && p.type==='checker' && checkerMoves(r,c,b,true).length>0)
       return true;
   }
@@ -1036,8 +1035,8 @@ function anyCapture(color, b) {
 
 // ── HAS ANY MOVES ─────────────────────────────────────────────────────
 function hasAnyCheckerMoves(color, b) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = b[r][c];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = b[r][c];
     if (p?.color===color && p.type==='checker' && checkerMoves(r,c,b).length>0)
       return true;
   }
@@ -1046,8 +1045,8 @@ function hasAnyCheckerMoves(color, b) {
 
 // ── PIECE COUNT ───────────────────────────────────────────────────────
 function countPieces(color, b) {
-  let n=0;
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++)
+  var n=0;
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++)
     if (b[r][c]?.color===color) n++;
   return n;
 }
@@ -1056,8 +1055,8 @@ function countPieces(color, b) {
 // nextColor = the player whose turn it will be next (not yet flipped)
 // Returns {type, msg} if game over, else null
 function checkersWin(nextColor, mode, b) {
-  const wn = countPieces('w', b);
-  const bn = countPieces('b', b);
+  var wn = countPieces('w', b);
+  var bn = countPieces('b', b);
 
   if (mode === 'anticheckers') {
     if (wn===0) return {type:'ared', msg:'💀 Red lost all — Red wins!'};
@@ -1073,9 +1072,7 @@ function checkersWin(nextColor, mode, b) {
   return null;
 }
 
-// ========================================================
-// ctc.js
-// ========================================================
+// ── ctc.js ──
 // ════════════════════════════════════════════════════════
 //  js/rules/ctc.js — Coast to Coast rules engine
 //  Pure functions. No DOM. No side effects.
@@ -1094,7 +1091,6 @@ function checkersWin(nextColor, mode, b) {
 //  Red  (w): a4,a3,a2, b4,b3,b2,b1, c3,c2,c1, d2,d1        → 12 pieces
 //  Black(b): e8,e7,    f8,f7,f6,    g8,g7,g6,g5, h7,h6,h5  → 12 pieces
 // ════════════════════════════════════════════════════════
-
 // alg → {row,col}
 function fromAlg(sq) {
   return {
@@ -1104,7 +1100,7 @@ function fromAlg(sq) {
 }
 
 // Home corners
-const CTC_HOME = {
+var CTC_HOME = {
   w: fromAlg('a1'),  // {row:7, col:0}
   b: fromAlg('h8')   // {row:0, col:7}
 };
@@ -1122,16 +1118,16 @@ function scoreCorner(color) {
 
 // ── STARTING POSITIONS ────────────────────────────────────────────────
 // Exact squares from rulebook
-const RED_START   = ['a4','a3','a2','b4','b3','b2','b1','c3','c2','c1','d2','d1']; // 12
-const BLACK_START = ['e8','e7','f8','f7','f6','g8','g7','g6','g5','h7','h6','h5']; // 12
+var RED_START   = ['a4','a3','a2','b4','b3','b2','b1','c3','c2','c1','d2','d1']; // 12
+var BLACK_START = ['e8','e7','f8','f7','f6','g8','g7','g6','g5','h7','h6','h5']; // 12
 
 function placeCTCPieces(board) {
   RED_START.forEach(sq => {
-    const {row,col} = fromAlg(sq);
+    var {row,col} = fromAlg(sq);
     board[row][col] = {type:'checker', color:'w', king:false, moved:false};
   });
   BLACK_START.forEach(sq => {
-    const {row,col} = fromAlg(sq);
+    var {row,col} = fromAlg(sq);
     board[row][col] = {type:'checker', color:'b', king:false, moved:false};
   });
 }
@@ -1172,23 +1168,23 @@ function isBackward(color, dr, dc) {
 }
 
 function ctcMoves(row, col, b) {
-  const p = b[row][col];
+  var p = b[row][col];
   if (!p || p.type !== 'checker') return [];
-  const {color, king} = p;
-  const ms = [];
+  var {color, king} = p;
+  var ms = [];
 
   // ── ONE-SQUARE MOVES ──
-  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+  for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
     if (!dr && !dc) continue;
     if (!king && isBackward(color, dr, dc)) continue;
-    const nr = row+dr, nc = col+dc;
+    var nr = row+dr, nc = col+dc;
     if (nr<0||nr>7||nc<0||nc>7) continue;
     if (!b[nr][nc]) ms.push({row:nr, col:nc, isJump:false});
   }
 
   // ── JUMP MOVES (multi-jump via recursion) ──
   // Jumps are optional and separate from moves (can't do both)
-  const jumps = collectJumps(row, col, b, color, king, new Set([`${row},${col}`]));
+  var jumps = collectJumps(row, col, b, color, king, new Set([`${row},${col}`]));
   ms.push(...jumps);
 
   return ms;
@@ -1196,31 +1192,31 @@ function ctcMoves(row, col, b) {
 
 // Recursively collect all reachable jump destinations
 function collectJumps(row, col, b, color, king, visited) {
-  const ms = [];
+  var ms = [];
 
-  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+  for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
     if (!dr && !dc) continue;
     if (!king && isBackward(color, dr, dc)) continue;
 
-    const mr = row+dr,  mc = col+dc;   // square being jumped OVER
-    const lr = row+2*dr, lc = col+2*dc; // landing square
+    var mr = row+dr,  mc = col+dc;   // square being jumped OVER
+    var lr = row+2*dr, lc = col+2*dc; // landing square
 
     if (mr<0||mr>7||mc<0||mc>7) continue;
     if (lr<0||lr>7||lc<0||lc>7) continue;
     if (!b[mr][mc]) continue;     // must be a piece to jump over
     if (b[lr][lc]) continue;      // landing must be empty
 
-    const landKey = `${lr},${lc}`;
+    var landKey = `${lr},${lc}`;
     if (visited.has(landKey)) continue; // don't revisit
 
     ms.push({row:lr, col:lc, isJump:true});
 
     // Continue jumping from landing (multi-jump)
-    const orig = b[row][col];
+    var orig = b[row][col];
     b[lr][lc] = orig;
     b[row][col] = null;
 
-    const further = collectJumps(
+    var further = collectJumps(
       lr, lc, b, color, king,
       new Set([...visited, landKey])
     );
@@ -1234,8 +1230,8 @@ function collectJumps(row, col, b, color, king, visited) {
 
 // ── HAS ANY MOVES ─────────────────────────────────────────────────────
 function hasAnyCTCMoves(color, b) {
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-    const p = b[r][c];
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
+    var p = b[r][c];
     if (p?.color===color && p.type==='checker' && ctcMoves(r,c,b).length>0)
       return true;
   }
@@ -1244,7 +1240,7 @@ function hasAnyCTCMoves(color, b) {
 
 // ── SCORE COUNT ───────────────────────────────────────────────────────
 // Win target — score all 12 pieces home (symmetric)
-const CTC_TOTAL = 12;
+var CTC_TOTAL = 12;
 
 // ── WIN CHECK ─────────────────────────────────────────────────────────
 function ctcWin(score, nextColor, b) {
@@ -1260,9 +1256,7 @@ function ctcWin(score, nextColor, b) {
   return null;
 }
 
-// ========================================================
-// chess123.js
-// ========================================================
+// ── chess123.js ──
 // ════════════════════════════════════════════════════════
 //  js/rules/chess123.js — Chess123 skill system engine
 //  Pure functions. No DOM. No side effects.
@@ -1312,7 +1306,6 @@ function ctcWin(score, nextColor, b) {
 //  └── Your own: full detail
 //  └── Opponent: status only (available/used) — timing hidden
 // ════════════════════════════════════════════════════════
-
 // ── INITIAL SKILL STATE ───────────────────────────────────────────────
 function freshSkills() {
   return {
@@ -1365,9 +1358,9 @@ function isMidPiece(type) {
 
 // ── COUNT PIECES ON BOARD ─────────────────────────────────────────────
 function countByType(board, color, type) {
-  let n = 0;
-  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
-    const p = board[r][c];
+  var n = 0;
+  for (var r=0; r<8; r++) for (var c=0; c<8; c++) {
+    var p = board[r][c];
     if (p?.color===color && p.type===type) n++;
   }
   return n;
@@ -1410,9 +1403,9 @@ function updateSkillsAfterMove({
   opponentInCheck,
   skillUsed,        // null = normal move, or skill key used by movedColor
 }) {
-  const opp   = movedColor === 'w' ? 'b' : 'w';
-  const mysk  = skills[movedColor];
-  const oppsk = skills[opp];
+  var opp   = movedColor === 'w' ? 'b' : 'w';
+  var mysk  = skills[movedColor];
+  var oppsk = skills[opp];
 
   // ── COOLDOWN: apply/clear ──────────────────────────────────────────
   if (skillUsed) {
@@ -1546,14 +1539,11 @@ function getSkillStatus(sk, board, color) {
   };
 }
 
-// ========================================================
-// boards.js
-// ========================================================
+// ── boards.js ──
 // ════════════════════════════════════════════════════════
 //  js/boards.js — Board initialisation for all modes
 //  Each function mutates G.board and resets relevant state
 // ════════════════════════════════════════════════════════
-
 function initBoard(G) {
   G.board    = mkBoard();
   G.ep       = null;
@@ -1577,12 +1567,12 @@ function initBoard(G) {
 
 // ── STANDARD / CHESS 960 / KING OF THE HILL ──────────────────────────
 function initChess(G) {
-  const back = G.mode === 'chess960' ? gen960() : ['r','n','b','q','k','b','n','r'];
+  var back = G.mode === 'chess960' ? gen960() : ['r','n','b','q','k','b','n','r'];
   G.rsc = {
     w: {q: back.indexOf('r'),    k: back.lastIndexOf('r')},
     b: {q: back.indexOf('r'),    k: back.lastIndexOf('r')}
   };
-  for (let c=0; c<8; c++) {
+  for (var c=0; c<8; c++) {
     G.board[0][c] = {type:back[c], color:'b', moved:false};
     G.board[7][c] = {type:back[c], color:'w', moved:false};
     G.board[1][c] = {type:'p',     color:'b', moved:false};
@@ -1593,19 +1583,19 @@ function initChess(G) {
 // ── HORDE ─────────────────────────────────────────────────────────────
 function initHorde(G) {
   G.cr = {w:{k:false,q:false}, b:{k:true,q:true}};
-  const back = ['r','n','b','q','k','b','n','r'];
-  for (let c=0; c<8; c++) {
+  var back = ['r','n','b','q','k','b','n','r'];
+  for (var c=0; c<8; c++) {
     G.board[0][c] = {type:back[c], color:'b', moved:false};
     G.board[1][c] = {type:'p',     color:'b', moved:false};
-    for (let r=4; r<=7; r++) G.board[r][c] = {type:'p', color:'w', moved: r!==6};
+    for (var r=4; r<=7; r++) G.board[r][c] = {type:'p', color:'w', moved: r!==6};
   }
-  for (const c of [1,2,5,6]) G.board[3][c] = {type:'p', color:'w', moved:true};
+  for (var c of [1,2,5,6]) G.board[3][c] = {type:'p', color:'w', moved:true};
 }
 
 // ── STANDARD CHECKERS / ANTI-CHECKERS ────────────────────────────────
 function initCheckers(G) {
   G.cr = {w:{k:false,q:false}, b:{k:false,q:false}};
-  for (let r=0; r<8; r++) for (let c=0; c<8; c++)
+  for (var r=0; r<8; r++) for (var c=0; c<8; c++)
     if ((r+c)%2 === 1) {
       if (r<3) G.board[r][c] = {type:'checker', color:'b', king:false};
       if (r>4) G.board[r][c] = {type:'checker', color:'w', king:false};
@@ -1618,14 +1608,11 @@ function initCTC(G) {
   placeCTCPieces(G.board);
 }
 
-// ========================================================
-// engine.js
-// ========================================================
+// ── engine.js ──
 // ════════════════════════════════════════════════════════
 //  js/engine.js — Move execution for all modes
 //  Calls rules modules, updates G, then calls render()
 // ════════════════════════════════════════════════════════
-
 // ── HELPERS ───────────────────────────────────────────────────────────
 function isChessMode(mode) {
   return ['standard','chess960','kinghill','chess123'].includes(mode);
@@ -1657,9 +1644,9 @@ function endGame(type, msg, G, lmvEl, chkiEl) {
 
 // ── EXECUTE CHESS MOVE ────────────────────────────────────────────────
 function execChess(fr, fc, mv, G, lmvEl, chkiEl) {
-  const p   = G.board[fr][fc];
-  const cap = G.board[mv.row][mv.col];
-  const c   = p.color, opp = c==='w'?'b':'w';
+  var p   = G.board[fr][fc];
+  var cap = G.board[mv.row][mv.col];
+  var c   = p.color, opp = c==='w'?'b':'w';
 
   G.hmc = (p.type==='p' || cap || mv.epCap) ? 0 : G.hmc+1;
   applyChessMove(G.board, fr, fc, mv);
@@ -1675,13 +1662,13 @@ function execChess(fr, fc, mv, G, lmvEl, chkiEl) {
     if (mv.col===G.rsc[opp].q) G.cr[opp].q=false;
   }
 
-  const PNAME = {r:'Rook',n:'Knight',b:'Bishop',q:'Queen',k:'King',p:'Pawn'};
+  var PNAME = {r:'Rook',n:'Knight',b:'Bishop',q:'Queen',k:'King',p:'Pawn'};
   G.lmFrom = alg(fr,fc); G.lmTo = alg(mv.row,mv.col);
-  const capTxt = cap?` ×${PNAME[cap.type]}`:(mv.epCap?' ×(ep)':'');
-  const csTxt  = mv.castle==='k'?' O-O':mv.castle==='q'?' O-O-O':'';
+  var capTxt = cap?` ×${PNAME[cap.type]}`:(mv.epCap?' ×(ep)':'');
+  var csTxt  = mv.castle==='k'?' O-O':mv.castle==='q'?' O-O-O':'';
   lmvEl.innerHTML = `${c==='w'?'White':'Black'} ${PNAME[p.type]} ${G.lmFrom}→${G.lmTo}${capTxt}${csTxt}`;
 
-  const promoRow = c==='w'?0:7;
+  var promoRow = c==='w'?0:7;
   if (p.type==='p' && mv.row===promoRow) {
     showPromo(c, chosen => {
       G.board[mv.row][mv.col] = {type:chosen, color:c, moved:true};
@@ -1696,9 +1683,9 @@ function afterChess(movedColor, G, lmvEl, chkiEl) {
   G.turn = movedColor==='w'?'b':'w';
   G.sel  = null; G.moves = [];
 
-  const key  = posKey(G);
+  var key  = posKey(G);
   G.posHist.push(key);
-  const reps = G.posHist.filter(k=>k===key).length;
+  var reps = G.posHist.filter(k=>k===key).length;
 
   if (G.mode==='kinghill' && hillWin(G, lmvEl, chkiEl)) return;
   if (G.mode==='horde'    && hordeWin(G, lmvEl, chkiEl)) return;
@@ -1718,8 +1705,8 @@ function afterChess(movedColor, G, lmvEl, chkiEl) {
 }
 
 function hillWin(G, lmvEl, chkiEl) {
-  for (let r=3;r<=4;r++) for (let c=3;c<=4;c++) {
-    const p = G.board[r][c];
+  for (var r=3;r<=4;r++) for (var c=3;c<=4;c++) {
+    var p = G.board[r][c];
     if (p?.type==='k') {
       endGame(p.color==='w'?'white':'black',
         `⛰ King on the hill! ${p.color==='w'?'White':'Black'} wins!`, G, lmvEl, chkiEl);
@@ -1730,8 +1717,8 @@ function hillWin(G, lmvEl, chkiEl) {
 }
 
 function hordeWin(G, lmvEl, chkiEl) {
-  let hasW=false, hasB=false;
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+  var hasW=false, hasB=false;
+  for (var r=0;r<8;r++) for (var c=0;c<8;c++) {
     if (G.board[r][c]?.color==='w') hasW=true;
     if (G.board[r][c]?.color==='b') hasB=true;
   }
@@ -1742,15 +1729,15 @@ function hordeWin(G, lmvEl, chkiEl) {
 
 // ── EXECUTE CHECKERS MOVE ─────────────────────────────────────────────
 function execChecker(fr, fc, mv, G, lmvEl, chkiEl) {
-  const p        = G.board[fr][fc];
-  const pHTML    = pieceHTML(p);
-  const boardEl  = document.getElementById('board');
+  var p        = G.board[fr][fc];
+  var pHTML    = pieceHTML(p);
+  var boardEl  = document.getElementById('board');
 
   // Build animation step: from → to (single step for checkers)
-  const steps = [{fromRow:fr, fromCol:fc, toRow:mv.row, toCol:mv.col}];
+  var steps = [{fromRow:fr, fromCol:fc, toRow:mv.row, toCol:mv.col}];
 
   // Hide source piece during animation
-  const srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
+  var srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
   if (srcSq) srcSq.innerHTML = '';
 
   animateMove(steps, pHTML, boardEl, 200).then(() => {
@@ -1767,7 +1754,7 @@ function execChecker(fr, fc, mv, G, lmvEl, chkiEl) {
 
     // Multi-jump chain
     if (mv.cap) {
-      const more = checkerMoves(mv.row, mv.col, G.board, true);
+      var more = checkerMoves(mv.row, mv.col, G.board, true);
       if (more.length > 0) {
         G.chain=true; G.mustCap=true;
         G.chainSq={row:mv.row, col:mv.col};
@@ -1780,8 +1767,8 @@ function execChecker(fr, fc, mv, G, lmvEl, chkiEl) {
     G.chain=false; G.mustCap=false; G.chainSq=null;
     G.sel=null; G.moves=[];
 
-    const nextColor = G.turn==='w'?'b':'w';
-    const result    = checkersWin(nextColor, G.mode, G.board);
+    var nextColor = G.turn==='w'?'b':'w';
+    var result    = checkersWin(nextColor, G.mode, G.board);
     if (result) { endGame(result.type, result.msg, G, lmvEl, chkiEl); return; }
 
     G.turn    = nextColor;
@@ -1792,17 +1779,17 @@ function execChecker(fr, fc, mv, G, lmvEl, chkiEl) {
 
 // ── EXECUTE COAST TO COAST MOVE ───────────────────────────────────────
 function execCTC(fr, fc, mv, G, lmvEl, chkiEl) {
-  const p       = G.board[fr][fc];
-  const pHTML   = pieceHTML(p);
-  const boardEl = document.getElementById('board');
+  var p       = G.board[fr][fc];
+  var pHTML   = pieceHTML(p);
+  var boardEl = document.getElementById('board');
 
   // For jump moves, build step-by-step path through intermediate squares
   // Jump: piece moves 2 squares — animate through the middle square
-  const steps = [];
+  var steps = [];
   if (mv.isJump) {
     // Intermediate square = midpoint
-    const midRow = Math.round((fr + mv.row) / 2);
-    const midCol = Math.round((fc + mv.col) / 2);
+    var midRow = Math.round((fr + mv.row) / 2);
+    var midCol = Math.round((fc + mv.col) / 2);
     steps.push({fromRow:fr,     fromCol:fc,     toRow:midRow, toCol:midCol});
     steps.push({fromRow:midRow, fromCol:midCol, toRow:mv.row, toCol:mv.col});
   } else {
@@ -1810,10 +1797,10 @@ function execCTC(fr, fc, mv, G, lmvEl, chkiEl) {
   }
 
   // Hide source piece during animation
-  const srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
+  var srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
   if (srcSq) srcSq.innerHTML = '';
 
-  const stepMs = mv.isJump ? 160 : 200;
+  var stepMs = mv.isJump ? 160 : 200;
 
   animateMove(steps, pHTML, boardEl, stepMs).then(() => {
     // Apply move to board state
@@ -1824,14 +1811,14 @@ function execCTC(fr, fc, mv, G, lmvEl, chkiEl) {
     G.lmFrom = alg(fr,fc); G.lmTo = alg(mv.row,mv.col);
     lmvEl.innerHTML = `${p.color==='w'?'🔴 Red':'⚫ Black'} ${G.lmFrom}→${G.lmTo}`;
 
-    const promote = promoteCorner(G.turn);
-    const score   = scoreCorner(G.turn);
+    var promote = promoteCorner(G.turn);
+    var score   = scoreCorner(G.turn);
 
     // Promotion check
     if (!p.king && mv.row===promote.row && mv.col===promote.col) {
       p.king = true;
       lmvEl.innerHTML += ' ★ KING!';
-      const bonusMoves = ctcMoves(mv.row, mv.col, G.board);
+      var bonusMoves = ctcMoves(mv.row, mv.col, G.board);
       if (bonusMoves.length > 0) {
         G.ctcBonus = {row:mv.row, col:mv.col};
         G.sel      = {row:mv.row, col:mv.col};
@@ -1860,16 +1847,16 @@ function execCTC(fr, fc, mv, G, lmvEl, chkiEl) {
 
 // Bonus move after promotion — also animated
 function execCTCBonus(fr, fc, mv, G, lmvEl, chkiEl) {
-  const p       = G.board[fr][fc];
-  const pHTML   = pieceHTML(p);
-  const boardEl = document.getElementById('board');
+  var p       = G.board[fr][fc];
+  var pHTML   = pieceHTML(p);
+  var boardEl = document.getElementById('board');
 
-  const steps = mv.isJump ? [
+  var steps = mv.isJump ? [
     {fromRow:fr, fromCol:fc, toRow:Math.round((fr+mv.row)/2), toCol:Math.round((fc+mv.col)/2)},
     {fromRow:Math.round((fr+mv.row)/2), fromCol:Math.round((fc+mv.col)/2), toRow:mv.row, toCol:mv.col}
   ] : [{fromRow:fr, fromCol:fc, toRow:mv.row, toCol:mv.col}];
 
-  const srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
+  var srcSq = boardEl.querySelector(`[data-sq="${fr},${fc}"]`);
   if (srcSq) srcSq.innerHTML = '';
 
   animateMove(steps, pHTML, boardEl, 200).then(() => {
@@ -1880,7 +1867,7 @@ function execCTCBonus(fr, fc, mv, G, lmvEl, chkiEl) {
     G.lmTo = alg(mv.row,mv.col);
     lmvEl.innerHTML += ` → ${G.lmTo}`;
 
-    const score = scoreCorner(G.turn);
+    var score = scoreCorner(G.turn);
     if (p.king && mv.row===score.row && mv.col===score.col) {
       G.board[mv.row][mv.col] = null;
       G.ctcScore[G.turn]++;
@@ -1899,10 +1886,10 @@ function afterCTC(G, lmvEl, chkiEl) {
   G.ctcBonus = null;
   chkiEl.innerHTML = '';
 
-  const nextColor = G.turn==='w'?'b':'w';
+  var nextColor = G.turn==='w'?'b':'w';
 
   // Win check BEFORE flipping turn
-  const result = ctcWin(G.ctcScore, nextColor, G.board);
+  var result = ctcWin(G.ctcScore, nextColor, G.board);
   if (result) { endGame(result.type, result.msg, G, lmvEl, chkiEl); return; }
 
   G.turn = nextColor;
@@ -1930,7 +1917,7 @@ function afterCTC(G, lmvEl, chkiEl) {
 // ── ACTIVATE SKILL (called from UI button click) ───────────────────
 function activateSkill123(skillKey, G, chkiEl) {
   if (G.over || G.c123.phase !== 'normal') return;
-  const sk = G.skills[G.turn];
+  var sk = G.skills[G.turn];
 
   switch (skillKey) {
     case 'bank':
@@ -1977,14 +1964,14 @@ function activateSkill123(skillKey, G, chkiEl) {
 // Called from main.js handleBoardClick when mode === 'chess123'
 // Handles all phases: normal, move2-first, s2-first, sp-promote
 function execChess123(fr, fc, mv, G, lmvEl, chkiEl) {
-  const phase = G.c123.phase;
+  var phase = G.c123.phase;
 
   // ── SP PROMOTE: click a pawn to promote it in place ──
   if (phase === 'sp-promote') {
-    const p = G.board[fr][fc];
+    var p = G.board[fr][fc];
     // Must click one of the valid pawns
-    const isPawn = p?.type === 'p' && p.color === G.turn;
-    const isValidPawn = G.c123.spPawns?.some(pw => pw.row===fr && pw.col===fc);
+    var isPawn = p?.type === 'p' && p.color === G.turn;
+    var isValidPawn = G.c123.spPawns?.some(pw => pw.row===fr && pw.col===fc);
     if (!isPawn || !isValidPawn) {
       chkiEl.innerHTML = '👑 Click one of YOUR pawns to promote it to Queen!';
       return;
@@ -2015,7 +2002,7 @@ function execChess123(fr, fc, mv, G, lmvEl, chkiEl) {
 
   } else if (phase === 'move2-second') {
     // Second piece of Move-2 — must be different from first piece
-    const fp = G.c123.firstPiece;
+    var fp = G.c123.firstPiece;
     if (fp && mv.row === fp.row && mv.col === fp.col) {
       // Can't move same piece — UI should prevent this but double-check
       chkiEl.innerHTML = '⚠️ Must move a DIFFERENT piece for second move!';
@@ -2034,7 +2021,7 @@ function execChess123(fr, fc, mv, G, lmvEl, chkiEl) {
 
   } else if (phase === 's2-second') {
     // Second move of Special-2 — must move SAME piece as first
-    const fp = G.c123.firstPiece;
+    var fp = G.c123.firstPiece;
     if (!fp || (fr !== fp.row || fc !== fp.col)) {
       chkiEl.innerHTML = '⚠️ Must move the SAME piece for Special-2!';
       return;
@@ -2045,10 +2032,10 @@ function execChess123(fr, fc, mv, G, lmvEl, chkiEl) {
 
 // ── INTERNAL: execute one chess move within a 123 turn ───────────────
 function _exec123SingleMove(fr, fc, mv, G, lmvEl, chkiEl, endsTurn) {
-  const p      = G.board[fr][fc];
-  const cap    = G.board[mv.row][mv.col];
-  const c      = G.turn;
-  const opp    = c==='w'?'b':'w';
+  var p      = G.board[fr][fc];
+  var cap    = G.board[mv.row][mv.col];
+  var c      = G.turn;
+  var opp    = c==='w'?'b':'w';
 
   G.hmc = (p.type==='p' || cap || mv.epCap) ? 0 : G.hmc+1;
   applyChessMove(G.board, fr, fc, mv);
@@ -2065,13 +2052,13 @@ function _exec123SingleMove(fr, fc, mv, G, lmvEl, chkiEl, endsTurn) {
     if (mv.col===G.rsc[opp].q) G.cr[opp].q=false;
   }
 
-  const PNAME = {r:'Rook',n:'Knight',b:'Bishop',q:'Queen',k:'King',p:'Pawn'};
+  var PNAME = {r:'Rook',n:'Knight',b:'Bishop',q:'Queen',k:'King',p:'Pawn'};
   G.lmFrom = alg(fr,fc); G.lmTo = alg(mv.row,mv.col);
-  const capTxt = cap?` ×${PNAME[cap.type]}`:(mv.epCap?' ×(ep)':'');
+  var capTxt = cap?` ×${PNAME[cap.type]}`:(mv.epCap?' ×(ep)':'');
   lmvEl.innerHTML = `${c==='w'?'White':'Black'} ${PNAME[p.type]} ${G.lmFrom}→${G.lmTo}${capTxt}`;
 
   // Promotion
-  const promoRow = c==='w'?0:7;
+  var promoRow = c==='w'?0:7;
   if (p.type==='p' && mv.row===promoRow) {
     showPromo(c, chosen => {
       G.board[mv.row][mv.col] = {type:chosen, color:c, moved:true};
@@ -2085,10 +2072,10 @@ function _exec123SingleMove(fr, fc, mv, G, lmvEl, chkiEl, endsTurn) {
 
 // ── AFTER CHESS123 TURN ENDS ──────────────────────────────────────────
 function _after123(movedColor, capturedPiece, G, lmvEl, chkiEl) {
-  const opp = movedColor==='w'?'b':'w';
+  var opp = movedColor==='w'?'b':'w';
 
   // Is opponent in check after this move?
-  const oppInCheck = inCheck(opp, G.board);
+  var oppInCheck = inCheck(opp, G.board);
 
   // Update all skill states
   updateSkillsAfterMove({
@@ -2101,7 +2088,7 @@ function _after123(movedColor, capturedPiece, G, lmvEl, chkiEl) {
   });
 
   // Check if opponent's SP just got confirmed (pending reached 0)
-  const oppsk = G.skills[opp];
+  var oppsk = G.skills[opp];
   if (oppsk.spPending === 0 && !oppsk.spDone) {
     // Was it just confirmed this turn? Check if it WAS pending before update
     // We handle this via the pending countdown — when it hits 0 naturally (not via cancel)
@@ -2133,9 +2120,9 @@ function _after123(movedColor, capturedPiece, G, lmvEl, chkiEl) {
   chkiEl.innerHTML = '';
 
   // Position history for draws
-  const key = posKey(G);
+  var key = posKey(G);
   G.posHist.push(key);
-  const reps = G.posHist.filter(k=>k===key).length;
+  var reps = G.posHist.filter(k=>k===key).length;
 
   // King of Hill check (chess123 can run on hill board? No — separate mode)
   // Standard end conditions
@@ -2161,16 +2148,16 @@ function _after123(movedColor, capturedPiece, G, lmvEl, chkiEl) {
 // SP promotion = one pawn promotes to Queen in place (no movement needed).
 // Player picks WHICH pawn via an overlay. Then turn continues normally.
 function _checkSPConfirmation(G, lmvEl, chkiEl) {
-  const sk = G.skills[G.turn];
+  var sk = G.skills[G.turn];
   if (!sk.spConfirming) return;
 
   sk.spConfirming = false;
   sk.spDone = true;
 
   // Find all pawns belonging to current player
-  const pawns = [];
-  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
-    const p = G.board[r][c];
+  var pawns = [];
+  for (var r=0; r<8; r++) for (var c=0; c<8; c++) {
+    var p = G.board[r][c];
     if (p?.color === G.turn && p.type === 'p') pawns.push({row:r,col:c});
   }
 
@@ -2190,40 +2177,41 @@ function _checkSPConfirmation(G, lmvEl, chkiEl) {
   G.sel = null; G.moves = [];
 }
 
-// ========================================================
-// render.js
-// ========================================================
+// ── render.js ──
 // ════════════════════════════════════════════════════════
 //  js/render.js — UI rendering
 //  Reads G state, writes to DOM. Never modifies G.
 // ════════════════════════════════════════════════════════
-
 // ── DOM REFS (set once on boot) ───────────────────────────────────────
-function setDOMRefs() {}
+var boardEl, bwrapEl, bcontEl, tplrEl, lmvEl, chkiEl, scoreRow, scoreRedEl, scoreBlkEl;
+
+function setDOMRefs(refs) {
+  ({boardEl, bwrapEl, bcontEl, tplrEl, lmvEl, chkiEl, scoreRow, scoreRedEl, scoreBlkEl} = refs);
+}
 
 // ── COORDINATE HELPERS ────────────────────────────────────────────────
 function alg(r,c) { return String.fromCharCode(97+c)+(8-r); }
 
 // ── PIECE HTML ────────────────────────────────────────────────────────
-const SYM = {wr:'♖',wn:'♘',wb:'♗',wq:'♕',wk:'♔',wp:'♙',br:'♜',bn:'♞',bb:'♝',bq:'♛',bk:'♚',bp:'♟'};
+var SYM = {wr:'♖',wn:'♘',wb:'♗',wq:'♕',wk:'♔',wp:'♙',br:'♜',bn:'♞',bb:'♝',bq:'♛',bk:'♚',bp:'♟'};
 
 function pieceHTML(p) {
   if (!p) return '';
   if (p.type === 'checker') {
-    const col  = p.color==='w' ? 'c-red' : 'c-blk';
-    const king = p.king ? ' c-king' : '';
+    var col  = p.color==='w' ? 'c-red' : 'c-blk';
+    var king = p.king ? ' c-king' : '';
     return `<div class="checker-disc ${col}${king}"></div>`;
   }
   return `<span class="pc">${SYM[p.color+p.type]||''}</span>`;
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────────────────
-const VICO = {
+var VICO = {
   white:'🏆♔🏆', black:'🏆♚🏆', red:'🔴👑🔴',
   horde:'⚔️🏆⚔️', ared:'💀🔴💀', ablk:'💀⚫💀', draw:'🤝',
   ctc_red:'🏆🔴🏆', ctc_blk:'🏆⚫🏆'
 };
-const VTIT = {
+var VTIT = {
   white:'WHITE WINS!', black:'BLACK WINS!', red:'RED WINS!',
   horde:'HORDE WINS!', ared:'RED WINS!', ablk:'BLACK WINS!', draw:'DRAW',
   ctc_red:'RED WINS!', ctc_blk:'BLACK WINS!'
@@ -2235,7 +2223,7 @@ function clearOverlays() {
 
 function showVictory(type) {
   clearOverlays();
-  const ov = document.createElement('div');
+  var ov = document.createElement('div');
   ov.className = 'ov';
   ov.innerHTML = `<div class="vcard">
     <div class="vico">${VICO[type]||'♟'}</div>
@@ -2248,10 +2236,10 @@ function showVictory(type) {
 
 function showPromo(color, cb) {
   clearOverlays();
-  const ps = color==='w'
+  var ps = color==='w'
     ? [{t:'q',s:'♕'},{t:'r',s:'♖'},{t:'b',s:'♗'},{t:'n',s:'♘'}]
     : [{t:'q',s:'♛'},{t:'r',s:'♜'},{t:'b',s:'♝'},{t:'n',s:'♞'}];
-  const ov = document.createElement('div');
+  var ov = document.createElement('div');
   ov.className = 'ov';
   ov.innerHTML = `<div class="pcard">
     <div class="ptit">PROMOTE PAWN</div>
@@ -2265,37 +2253,37 @@ function showPromo(color, cb) {
 
 // ── CHESS123 HUD ──────────────────────────────────────────────────────
 function render123HUD(G) {
-  const hudEl = document.getElementById('hud123');
+  var hudEl = document.getElementById('hud123');
   if (!hudEl) return;
   hudEl.style.display = 'block';
 
-  const wSt  = getSkillStatus(G.skills.w, G.board, 'w');
-  const bSt  = getSkillStatus(G.skills.b, G.board, 'b');
-  const turn  = G.turn;
-  const phase = G.c123.phase;
+  var wSt  = getSkillStatus(G.skills.w, G.board, 'w');
+  var bSt  = getSkillStatus(G.skills.b, G.board, 'b');
+  var turn  = G.turn;
+  var phase = G.c123.phase;
 
   function skillPanel(color, st, isMyTurn) {
-    const label = color==='w' ? '⚪ White' : '⚫ Black';
-    const cd    = st.cooldown ? ' ❄️' : '';
+    var label = color==='w' ? '⚪ White' : '⚫ Black';
+    var cd    = st.cooldown ? ' ❄️' : '';
 
-    const bankDots = '●'.repeat(st.bank.count) + '○'.repeat(2 - st.bank.count);
-    const bankChk  = st.bank.count > 0
+    var bankDots = '●'.repeat(st.bank.count) + '○'.repeat(2 - st.bank.count);
+    var bankChk  = st.bank.count > 0
       ? `<span class="hud-check">${st.bank.checkCount}/3 ⚠️</span>` : '';
-    const bankBtn  = isMyTurn && st.bank.available && phase==='normal'
+    var bankBtn  = isMyTurn && st.bank.available && phase==='normal'
       ? `<button class="hud-btn" onclick="window.activateSkill('bank')">USE</button>` : '';
 
-    const s2Status = st.s2.locked ? '🔒' : st.s2.used ? '✓' : '✅';
-    const s2Btn    = isMyTurn && st.s2.available && phase==='normal'
+    var s2Status = st.s2.locked ? '🔒' : st.s2.used ? '✓' : '✅';
+    var s2Btn    = isMyTurn && st.s2.available && phase==='normal'
       ? `<button class="hud-btn" onclick="window.activateSkill('s2')">USE</button>` : '';
 
-    const autoStr = st.auto.count > 0
+    var autoStr = st.auto.count > 0
       ? `${st.auto.count}× <small>(${st.auto.expiries.join(',')}t)</small>` : '—';
-    const autoBtn = isMyTurn && st.auto.available && phase==='normal'
+    var autoBtn = isMyTurn && st.auto.available && phase==='normal'
       ? `<button class="hud-btn" onclick="window.activateSkill('auto')">USE</button>` : '';
 
-    let spStr = st.sp.done ? '✓' : st.sp.pending
+    var spStr = st.sp.done ? '✓' : st.sp.pending
       ? `⏳${st.sp.pendingTurns}` : st.sp.available ? '✅' : '🔒';
-    const spBtn = isMyTurn && st.sp.available && phase==='normal'
+    var spBtn = isMyTurn && st.sp.available && phase==='normal'
       ? `<button class="hud-btn hud-btn-gold" onclick="window.activateSkill('sp')">GO</button>` : '';
 
     return `<div class="hud-panel ${isMyTurn?'hud-active':''}">
@@ -2307,7 +2295,7 @@ function render123HUD(G) {
     </div>`;
   }
 
-  let phaseMsg = '';
+  var phaseMsg = '';
   if (phase==='move2-first')  phaseMsg='<div class="hud-phase">⚡ Move-2: pick 1st piece</div>';
   if (phase==='move2-second') phaseMsg='<div class="hud-phase">⚡ Move-2: pick 2nd piece (different!)</div>';
   if (phase==='s2-first')     phaseMsg='<div class="hud-phase">💥 Special-2: pick your piece</div>';
@@ -2331,10 +2319,10 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
 
     // Get pixel position of a grid cell relative to boardEl
     function getSquareRect(row, col) {
-      const sq = boardEl.querySelector(`[data-sq="${row},${col}"]`);
+      var sq = boardEl.querySelector(`[data-sq="${row},${col}"]`);
       if (!sq) return null;
-      const bRect = boardEl.getBoundingClientRect();
-      const sRect = sq.getBoundingClientRect();
+      var bRect = boardEl.getBoundingClientRect();
+      var sRect = sq.getBoundingClientRect();
       return {
         x: sRect.left - bRect.left,
         y: sRect.top  - bRect.top,
@@ -2344,7 +2332,7 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
     }
 
     // Create floating disc overlay
-    const floater = document.createElement('div');
+    var floater = document.createElement('div');
     floater.className = 'move-floater';
     floater.innerHTML = pieceHTML_str;
     floater.style.cssText = `
@@ -2358,8 +2346,8 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
     boardEl.appendChild(floater);
 
     // Position floater at start square
-    const first = steps[0];
-    const startRect = getSquareRect(first.fromRow, first.fromCol);
+    var first = steps[0];
+    var startRect = getSquareRect(first.fromRow, first.fromCol);
     if (!startRect) { floater.remove(); resolve(); return; }
 
     floater.style.left   = startRect.x + 'px';
@@ -2371,7 +2359,7 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
     floater.style.justifyContent = 'center';
 
     // Animate each step sequentially
-    let stepIdx = 0;
+    var stepIdx = 0;
 
     function nextStep() {
       if (stepIdx >= steps.length) {
@@ -2379,8 +2367,8 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
         resolve();
         return;
       }
-      const step = steps[stepIdx++];
-      const toRect = getSquareRect(step.toRow, step.toCol);
+      var step = steps[stepIdx++];
+      var toRect = getSquareRect(step.toRow, step.toCol);
       if (!toRect) { floater.remove(); resolve(); return; }
 
       // Small delay then slide
@@ -2399,9 +2387,9 @@ function animateMove(steps, pieceHTML_str, boardEl, stepMs=180) {
 // Get square element by data attribute
 function tagSquares(boardEl) {
   // Add data-sq attribute to each square for animation targeting
-  const sqs = boardEl.querySelectorAll('.sq');
-  let idx = 0;
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+  var sqs = boardEl.querySelectorAll('.sq');
+  var idx = 0;
+  for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
     if (sqs[idx]) sqs[idx].dataset.sq = `${r},${c}`;
     idx++;
   }
@@ -2410,21 +2398,21 @@ function tagSquares(boardEl) {
 function render(G) {
   boardEl.innerHTML = '';
 
-  const isC   = isCheckerMode(G.mode);
-  const isCTC = isCTCMode(G.mode);
+  var isC   = isCheckerMode(G.mode);
+  var isCTC = isCTCMode(G.mode);
 
   // Check givers — only for chess modes
-  const givers  = (G.over||isC||isCTC) ? [] : checkGivers(G.turn, G);
-  const gSet    = new Set(givers.map(g=>`${g.row},${g.col}`));
+  var givers  = (G.over||isC||isCTC) ? [] : checkGivers(G.turn, G);
+  var gSet    = new Set(givers.map(g=>`${g.row},${g.col}`));
 
-  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
-    const p   = G.board[r][c];
-    const sq  = document.createElement('div');
+  for (var r=0; r<8; r++) for (var c=0; c<8; c++) {
+    var p   = G.board[r][c];
+    var sq  = document.createElement('div');
     sq.className = `sq ${(r+c)%2===0?'li':'dk'}`;
 
-    const sqAlg = alg(r,c);
-    const isSel = G.sel && G.sel.row===r && G.sel.col===c;
-    const mvM   = G.moves.find(m=>m.row===r&&m.col===c);
+    var sqAlg = alg(r,c);
+    var isSel = G.sel && G.sel.row===r && G.sel.col===c;
+    var mvM   = G.moves.find(m=>m.row===r&&m.col===c);
 
     if (isSel)             sq.classList.add('sel');
     if (G.lmFrom===sqAlg)  sq.classList.add('lf');
@@ -2447,7 +2435,7 @@ function render(G) {
 
     // Valid move indicators
     if (mvM) {
-      const isCap = (p && p.color!==G.turn) || mvM.cap || mvM.epCap;
+      var isCap = (p && p.color!==G.turn) || mvM.cap || mvM.epCap;
       sq.classList.add(isCap ? 'vc' : 'vm');
     }
 
@@ -2504,26 +2492,18 @@ function render(G) {
   // ── CHESS123 HUD ──
   if (is123Mode(G.mode)) render123HUD(G);
   else {
-    const hudEl = document.getElementById('hud123');
+    var hudEl = document.getElementById('hud123');
     if (hudEl) hudEl.style.display = 'none';
   }
 }
 
-// ========================================================
-// firebase.js
-// ========================================================
+// ── firebase.js ──
 // ════════════════════════════════════════════════════════
 //  js/firebase.js — Firebase Realtime Database
 //  All Firebase operations for MaxPlay multiplayer
 // ════════════════════════════════════════════════════════
-
-import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, get, update,
-         onValue, off, push, serverTimestamp,
-         onDisconnect }                           from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-
 // ── CONFIG ────────────────────────────────────────────────────────────
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey:            "AIzaSyBVMVofp3tqPWDsv7PJr_3-9QD7r1FTF4A",
   authDomain:        "multidevicegames-deb35.firebaseapp.com",
   databaseURL:       "https://multidevicegames-deb35-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -2533,32 +2513,32 @@ const firebaseConfig = {
   appId:             "1:550870350070:web:292fdd7696b3a8c59a94d7"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+var app = initializeApp(firebaseConfig);
+var db  = getDatabase(app);
 
 // ── ROOM ID GENERATOR ─────────────────────────────────────────────────
 // 6-character uppercase code — easy to share verbally at café
 function genRoomId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 (confusing)
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 (confusing)
   return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
 }
 
 // ── BOARD SERIALISATION ───────────────────────────────────────────────
 // Firebase can't store arrays with null — serialize board to flat object
 function serializeBoard(board) {
-  const obj = {};
-  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
-    const p = board[r][c];
+  var obj = {};
+  for (var r=0; r<8; r++) for (var c=0; c<8; c++) {
+    var p = board[r][c];
     if (p) obj[`${r}_${c}`] = p;
   }
   return obj;
 }
 
 function deserializeBoard(obj) {
-  const board = Array(8).fill(null).map(() => Array(8).fill(null));
+  var board = Array(8).fill(null).map(() => Array(8).fill(null));
   if (!obj) return board;
-  for (const [key, val] of Object.entries(obj)) {
-    const [r,c] = key.split('_').map(Number);
+  for (var [key, val] of Object.entries(obj)) {
+    var [r,c] = key.split('_').map(Number);
     board[r][c] = val;
   }
   return board;
@@ -2641,8 +2621,8 @@ function deserializeGameState(data, G) {
 
 function deserializeSkills(sk) {
   if (!sk) return null;
-  const { freshSkills } = window._chess123;
-  const s = freshSkills();
+  var { freshSkills } = window._chess123;
+  var s = freshSkills();
   s.bank         = sk.bank         ?? 2;
   s.checkCount   = sk.checkCount   ?? 0;
   s.s2unlocked   = !!sk.s2unlocked;
@@ -2661,10 +2641,10 @@ function deserializeSkills(sk) {
 
 // Create a new room — called by host
 async function createRoom(roomId, mode, hostColor, G) {
-  const roomRef = ref(db, `rooms/${roomId}`);
-  const expires = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
+  var roomRef = ref(db, `rooms/${roomId}`);
+  var expires = Date.now() + 6 * 60 * 60 * 1000; // 6 hours
 
-  const roomData = {
+  var roomData = {
     mode,
     status:    'waiting',
     createdAt: serverTimestamp(),
@@ -2687,11 +2667,11 @@ async function createRoom(roomId, mode, hostColor, G) {
 
 // Join existing room — called by guest
 async function joinRoom(roomId, guestColor) {
-  const roomRef = ref(db, `rooms/${roomId}`);
-  const snap    = await get(roomRef);
+  var roomRef = ref(db, `rooms/${roomId}`);
+  var snap    = await get(roomRef);
 
   if (!snap.exists()) throw new Error('Room not found');
-  const data = snap.val();
+  var data = snap.val();
   if (data.status !== 'waiting') throw new Error('Game already started');
   if (data.players?.[guestColor]) throw new Error('Color already taken');
 
@@ -2713,7 +2693,7 @@ async function submitMove(roomId, G) {
 
 // Listen to room changes — fires on every state update
 function listenRoom(roomId, callback) {
-  const roomRef = ref(db, `rooms/${roomId}`);
+  var roomRef = ref(db, `rooms/${roomId}`);
   onValue(roomRef, snap => {
     if (snap.exists()) callback(snap.val());
   });
@@ -2731,20 +2711,17 @@ async function endRoom(roomId, winner) {
 
 // Get room once (for joining)
 async function getRoom(roomId) {
-  const snap = await get(ref(db, `rooms/${roomId}`));
+  var snap = await get(ref(db, `rooms/${roomId}`));
   return snap.exists() ? snap.val() : null;
 }
 
-// ========================================================
-// lobby.js
-// ========================================================
+// ── lobby.js ──
 // ════════════════════════════════════════════════════════
 //  js/lobby.js — Lobby system
 //  Create/join rooms, QR code, waiting screen
 // ════════════════════════════════════════════════════════
-
 // ── LOBBY STATE ───────────────────────────────────────────────────────
-const MP = {
+var MP = {
   active:    false,     // is multiplayer mode on?
   roomId:    null,
   myColor:   null,      // 'w' or 'b'
@@ -2754,18 +2731,18 @@ const MP = {
 
 // ── URL PARAMS ────────────────────────────────────────────────────────
 function getRoomFromURL() {
-  const params = new URLSearchParams(window.location.search);
+  var params = new URLSearchParams(window.location.search);
   return { roomId: params.get('r'), color: params.get('c') };
 }
 
 function buildJoinURL(roomId, color) {
-  const base = window.location.href.split('?')[0];
+  var base = window.location.href.split('?')[0];
   return `${base}?r=${roomId}&c=${color}`;
 }
 
 // ── SHOW LOBBY SCREEN ─────────────────────────────────────────────────
 function showLobby(G, onGameStart) {
-  const el = document.getElementById('lobby-screen');
+  var el = document.getElementById('lobby-screen');
   if (!el) return;
   el.style.display = 'flex';
   document.getElementById('app-screen').style.display = 'none';
@@ -2774,17 +2751,17 @@ function showLobby(G, onGameStart) {
 }
 
 function hideLobby() {
-  const el = document.getElementById('lobby-screen');
+  var el = document.getElementById('lobby-screen');
   if (el) el.style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
 }
 
 // ── LOBBY HOME ────────────────────────────────────────────────────────
 function renderLobbyHome(G, onGameStart) {
-  const el = document.getElementById('lobby-content');
+  var el = document.getElementById('lobby-content');
   if (!el) return;
 
-  const modeNames = {
+  var modeNames = {
     standard:     '♔ Standard Chess',
     chess960:     '⚄ Chess 960',
     kinghill:     '⛰ King of the Hill',
@@ -2828,7 +2805,7 @@ function renderLobbyHome(G, onGameStart) {
   document.getElementById('btn-host-w').onclick = () => hostGame(G, 'w', onGameStart);
   document.getElementById('btn-host-b').onclick = () => hostGame(G, 'b', onGameStart);
   document.getElementById('btn-join').onclick    = () => {
-    const code = document.getElementById('join-code').value.trim().toUpperCase();
+    var code = document.getElementById('join-code').value.trim().toUpperCase();
     if (code.length !== 6) { showErr('Enter a 6-character room code'); return; }
     joinGame(code, G, onGameStart);
   };
@@ -2839,14 +2816,14 @@ function renderLobbyHome(G, onGameStart) {
 }
 
 function showErr(msg) {
-  const el = document.getElementById('lobby-err');
+  var el = document.getElementById('lobby-err');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
 
 // ── HOST GAME ─────────────────────────────────────────────────────────
 async function hostGame(G, color, onGameStart) {
-  const roomId = genRoomId();
-  const el     = document.getElementById('lobby-content');
+  var roomId = genRoomId();
+  var el     = document.getElementById('lobby-content');
 
   el.innerHTML = `<div class="lobby-card"><div class="lobby-spinner">Creating room…</div></div>`;
 
@@ -2865,9 +2842,9 @@ async function hostGame(G, color, onGameStart) {
 
 // ── WAITING SCREEN ────────────────────────────────────────────────────
 function renderWaitingScreen(roomId, myColor, G, onGameStart) {
-  const el       = document.getElementById('lobby-content');
-  const oppColor = myColor === 'w' ? 'b' : 'w';
-  const joinURL  = buildJoinURL(roomId, oppColor);
+  var el       = document.getElementById('lobby-content');
+  var oppColor = myColor === 'w' ? 'b' : 'w';
+  var joinURL  = buildJoinURL(roomId, oppColor);
 
   el.innerHTML = `
     <div class="lobby-card">
@@ -2914,20 +2891,20 @@ function renderWaitingScreen(roomId, myColor, G, onGameStart) {
 
 // ── JOIN GAME ─────────────────────────────────────────────────────────
 async function joinGame(roomId, G, onGameStart) {
-  const el = document.getElementById('lobby-content');
+  var el = document.getElementById('lobby-content');
   el.innerHTML = `<div class="lobby-card"><div class="lobby-spinner">Joining…</div></div>`;
 
   try {
-    const data     = await getRoom(roomId);
+    var data     = await getRoom(roomId);
     if (!data)     throw new Error('Room not found');
     if (data.status === 'ended') throw new Error('Game already ended');
 
     // Determine which color is available
-    const wTaken = !!data.players?.w?.joined;
-    const bTaken = !!data.players?.b?.joined;
+    var wTaken = !!data.players?.w?.joined;
+    var bTaken = !!data.players?.b?.joined;
     if (wTaken && bTaken) throw new Error('Room is full');
 
-    const myColor = wTaken ? 'b' : 'w';
+    var myColor = wTaken ? 'b' : 'w';
     await joinRoom(roomId, myColor);
 
     MP.roomId  = roomId;
@@ -2949,16 +2926,16 @@ async function joinGame(roomId, G, onGameStart) {
 // ── QR CODE GENERATOR ─────────────────────────────────────────────────
 // Lightweight QR using Google Charts API (no library needed)
 function generateQR(url, canvasId) {
-  const canvas = document.getElementById(canvasId);
+  var canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
   // Use QR server API — simple and reliable
-  const img  = new Image();
-  const size = 160;
+  var img  = new Image();
+  var size = 160;
   img.onload = () => {
     canvas.width  = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d');
     ctx.fillStyle = '#f0e8d8';
     ctx.fillRect(0, 0, size, size);
     ctx.drawImage(img, 0, 0, size, size);
@@ -2973,25 +2950,25 @@ function generateQR(url, canvasId) {
 // ── AUTO-JOIN FROM URL ────────────────────────────────────────────────
 // If player opens a join link, auto-start join flow
 async function handleURLJoin(G, onGameStart) {
-  const { roomId, color } = getRoomFromURL();
+  var { roomId, color } = getRoomFromURL();
   if (!roomId) return false;
 
   // Clear URL params without reload
-  const cleanURL = window.location.href.split('?')[0];
+  var cleanURL = window.location.href.split('?')[0];
   window.history.replaceState({}, '', cleanURL);
 
   showLobby(G, onGameStart);
-  const el = document.getElementById('lobby-content');
+  var el = document.getElementById('lobby-content');
   el.innerHTML = `<div class="lobby-card"><div class="lobby-spinner">Joining room ${roomId}…</div></div>`;
 
   try {
-    const data = await getRoom(roomId);
+    var data = await getRoom(roomId);
     if (!data) throw new Error('Room not found');
 
     // Determine color: use URL color if available, else pick free one
-    const wTaken = !!data.players?.w?.joined;
-    const bTaken = !!data.players?.b?.joined;
-    let myColor  = color;
+    var wTaken = !!data.players?.w?.joined;
+    var bTaken = !!data.players?.b?.joined;
+    var myColor  = color;
 
     if (myColor === 'w' && wTaken) myColor = bTaken ? null : 'b';
     if (myColor === 'b' && bTaken) myColor = wTaken ? null : 'w';
@@ -3018,45 +2995,44 @@ async function handleURLJoin(G, onGameStart) {
   }
 }
 
-// ========================================================
-// main.js
-// ========================================================
+// ── main.js ──
 // ════════════════════════════════════════════════════════
 //  js/main.js — Entry point
 //  Event listeners, click handling, mode switching, boot
 // ════════════════════════════════════════════════════════
-
 // ════════════════════════════════════════════════════════
 //  GLOBAL STATE
 // ════════════════════════════════════════════════════════
-let G = freshState();
+var G = freshState();
 
 // ════════════════════════════════════════════════════════
 //  DOM REFS
 // ════════════════════════════════════════════════════════
-const boardEl    = document.getElementById('board');
-const bwrapEl    = document.getElementById('bwrap');
-const bcontEl    = document.getElementById('bcont');
-const tplrEl     = document.getElementById('tplr');
-const lmvEl      = document.getElementById('lmv');
-const chkiEl     = document.getElementById('chki');
-const scoreRow   = document.getElementById('scoreRow');
-const scoreRedEl = document.getElementById('scoreRed');
-const scoreBlkEl = document.getElementById('scoreBlk');
-const modeBtns   = document.querySelectorAll('.mbtn');
+var boardEl    = document.getElementById('board');
+var bwrapEl    = document.getElementById('bwrap');
+var bcontEl    = document.getElementById('bcont');
+var tplrEl     = document.getElementById('tplr');
+var lmvEl      = document.getElementById('lmv');
+var chkiEl     = document.getElementById('chki');
+var scoreRow   = document.getElementById('scoreRow');
+var scoreRedEl = document.getElementById('scoreRed');
+var scoreBlkEl = document.getElementById('scoreBlk');
+var modeBtns   = document.querySelectorAll('.mbtn');
 
 // Pass DOM refs to render module
+setDOMRefs({boardEl,bwrapEl,bcontEl,tplrEl,lmvEl,chkiEl,scoreRow,scoreRedEl,scoreBlkEl});
+
 // ════════════════════════════════════════════════════════
 //  MOVE SELECTION HELPERS
 // ════════════════════════════════════════════════════════
 function getMovesFor(row, col) {
-  const isC   = isCheckerMode(G.mode);
-  const isCTC = isCTCMode(G.mode);
-  const is123 = is123Mode(G.mode);
+  var isC   = isCheckerMode(G.mode);
+  var isCTC = isCTCMode(G.mode);
+  var is123 = is123Mode(G.mode);
 
   G.mustCap = isC ? anyCapture(G.turn, G.board) : false;
 
-  let ms;
+  var ms;
   if (isC)        ms = checkerMoves(row, col, G.board);
   else if (isCTC) ms = ctcMoves(row, col, G.board);
   else            ms = legalMoves(row, col, G);
@@ -3065,13 +3041,13 @@ function getMovesFor(row, col) {
 
   // Chess123 Move-2 second piece: cannot move same piece as first
   if (is123 && G.c123.phase === 'move2-second' && G.c123.firstPiece) {
-    const fp = G.c123.firstPiece;
+    var fp = G.c123.firstPiece;
     if (row === fp.row && col === fp.col) return []; // can't pick same piece
   }
 
   // Chess123 Special-2 second: MUST move same piece as first
   if (is123 && G.c123.phase === 's2-second' && G.c123.firstPiece) {
-    const fp = G.c123.firstPiece;
+    var fp = G.c123.firstPiece;
     if (row !== fp.row || col !== fp.col) return []; // must be same piece
   }
 
@@ -3090,9 +3066,9 @@ window.activateSkill = function(skillKey) {
 window.handleBoardClick = function(row, col) {
   if (G.over) return;
 
-  const isC   = isCheckerMode(G.mode);
-  const isCTC = isCTCMode(G.mode);
-  const is123 = is123Mode(G.mode);
+  var isC   = isCheckerMode(G.mode);
+  var isCTC = isCTCMode(G.mode);
+  var is123 = is123Mode(G.mode);
 
   // ── Chess123 SP promote phase: click a pawn to promote ──
   if (is123 && G.c123.phase === 'sp-promote') {
@@ -3102,7 +3078,7 @@ window.handleBoardClick = function(row, col) {
 
   // ── CTC bonus move ──
   if (isCTC && G.ctcBonus) {
-    const mv = G.moves.find(m => m.row===row && m.col===col);
+    var mv = G.moves.find(m => m.row===row && m.col===col);
     if (mv) {
       G.hist.push(snapState(G, lmvEl.innerHTML));
       execCTCBonus(G.ctcBonus.row, G.ctcBonus.col, mv, G, lmvEl, chkiEl);
@@ -3112,7 +3088,7 @@ window.handleBoardClick = function(row, col) {
 
   // ── Checkers capture chain ──
   if (isC && G.chain && G.chainSq) {
-    const mv = G.moves.find(m => m.row===row && m.col===col);
+    var mv = G.moves.find(m => m.row===row && m.col===col);
     if (mv) {
       G.hist.push(snapState(G, lmvEl.innerHTML));
       execChecker(G.chainSq.row, G.chainSq.col, mv, G, lmvEl, chkiEl);
@@ -3122,17 +3098,17 @@ window.handleBoardClick = function(row, col) {
 
   if (!G.sel) {
     // ── SELECT a piece ──
-    const p = G.board[row][col];
+    var p = G.board[row][col];
     if (!p || p.color !== G.turn) return;
     if ((isC||isCTC) && p.type !== 'checker') return;
 
     // Chess123: during s2-second only the first piece is selectable
     if (is123 && G.c123.phase === 's2-second') {
-      const fp = G.c123.firstPiece;
+      var fp = G.c123.firstPiece;
       if (!fp || row !== fp.row || col !== fp.col) return;
     }
 
-    const ms = getMovesFor(row, col);
+    var ms = getMovesFor(row, col);
     if (!ms.length) return;
 
     G.sel   = {row, col};
@@ -3140,12 +3116,12 @@ window.handleBoardClick = function(row, col) {
     render(G);
 
   } else {
-    const mv = G.moves.find(m => m.row===row && m.col===col);
+    var mv = G.moves.find(m => m.row===row && m.col===col);
 
     if (mv) {
       // ── EXECUTE move ──
       if (!is123) G.hist.push(snapState(G, lmvEl.innerHTML));
-      const {row:fr, col:fc} = G.sel;
+      var {row:fr, col:fc} = G.sel;
       G.sel = null; G.moves = [];
 
       if (isC)        execChecker(fr, fc, mv, G, lmvEl, chkiEl);
@@ -3155,9 +3131,9 @@ window.handleBoardClick = function(row, col) {
 
     } else {
       // ── RESELECT ──
-      const p = G.board[row][col];
+      var p = G.board[row][col];
       if (p && p.color===G.turn && !((isC||isCTC) && p.type!=='checker')) {
-        const ms = getMovesFor(row, col);
+        var ms = getMovesFor(row, col);
         if (ms.length) { G.sel={row,col}; G.moves=ms; render(G); return; }
       }
       G.sel = null; G.moves = [];
@@ -3178,7 +3154,7 @@ function onGameStart(roomId, myColor, gameG) {
   MP.myColor = myColor;
 
   // Show which color I am
-  const colorLabel = document.getElementById('my-color-label');
+  var colorLabel = document.getElementById('my-color-label');
   if (colorLabel) {
     colorLabel.textContent = myColor === 'w' ? '⚪ You are White' : '⚫ You are Black';
     colorLabel.style.display = 'block';
@@ -3200,7 +3176,7 @@ function onGameStart(roomId, myColor, gameG) {
 
 // Override execChess/execChecker etc to also push to Firebase
 // We wrap the original move execution to submit after each move
-const _origHandleClick = window.handleBoardClick;
+var _origHandleClick = window.handleBoardClick;
 window.handleBoardClick = function(row, col) {
   if (MP.active) {
     // In multiplayer: only allow moves on your turn
@@ -3210,7 +3186,7 @@ window.handleBoardClick = function(row, col) {
 
   // After move executed, push to Firebase
   if (MP.active && MP.roomId) {
-    // Small delay to let state settle (especially for async promo)
+    // Small delay to var state settle (especially for async promo)
     setTimeout(() => submitMove(MP.roomId, G), 50);
   }
 };
@@ -3240,11 +3216,11 @@ function doReset() {
     MP.active  = false;
     MP.roomId  = null;
     MP.myColor = null;
-    const label = document.getElementById('my-color-label');
+    var label = document.getElementById('my-color-label');
     if (label) label.style.display = 'none';
   }
   clearOverlays();
-  const mode = G.mode;
+  var mode = G.mode;
   G = freshState();
   G.mode = mode;
   initBoard(G);
@@ -3272,7 +3248,7 @@ document.getElementById('undoBtn').addEventListener('click', doUndo);
 modeBtns.forEach(btn => btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
 
 // Multiplayer button
-const mpBtn = document.getElementById('mp-btn');
+var mpBtn = document.getElementById('mp-btn');
 if (mpBtn) mpBtn.addEventListener('click', () => showLobby(G, onGameStart));
 
 // ════════════════════════════════════════════════════════
@@ -3283,6 +3259,11 @@ render(G);
 
 // Check if opened via join link
 handleURLJoin(G, onGameStart);
+
+})().catch(err => {
+  console.error('MaxPlay init error:', err);
+});
+
 </script>
 </body>
 </html>
