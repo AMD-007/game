@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="MaxPlay — 8 classic board games, multiplayer. By MaxMin.">
-<title>MaxPlay v1778125427</title>
+<title>MaxPlay v1778125730</title>
 <style>
 /* ════════════════════════════════════════════════════════
    MaxPlay — game.css
@@ -687,15 +687,12 @@ footer{
 </div>
 
 <script type="module">
-// ── Firebase CDN imports (must be at top of module) ──
-import { getDatabase, ref, set, get, update,
-         onValue, off, push, serverTimestamp,
-         onDisconnect } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+// MaxPlay — Firebase CDN imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { get, getDatabase, off, onDisconnect, onValue, push, ref, serverTimestamp, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-// ── MaxPlay Game Engine ──
+// MaxPlay — Game Engine
 (async function() {
-'use strict';
 
 // ── state.js ──
 // ════════════════════════════════════════════════════════
@@ -2183,8 +2180,7 @@ function _checkSPConfirmation(G, lmvEl, chkiEl) {
 //  Reads G state, writes to DOM. Never modifies G.
 // ════════════════════════════════════════════════════════
 // ── DOM REFS (set once on boot) ───────────────────────────────────────
-var boardEl, bwrapEl, bcontEl, tplrEl, lmvEl, chkiEl, scoreRow, scoreRedEl, scoreBlkEl;
-
+// DOM refs shared from main.js scope
 function setDOMRefs(refs) {
   ({boardEl, bwrapEl, bcontEl, tplrEl, lmvEl, chkiEl, scoreRow, scoreRedEl, scoreBlkEl} = refs);
 }
@@ -2621,7 +2617,6 @@ function deserializeGameState(data, G) {
 
 function deserializeSkills(sk) {
   if (!sk) return null;
-  var { freshSkills } = window._chess123;
   var s = freshSkills();
   s.bank         = sk.bank         ?? 2;
   s.checkCount   = sk.checkCount   ?? 0;
@@ -3020,8 +3015,6 @@ var scoreBlkEl = document.getElementById('scoreBlk');
 var modeBtns   = document.querySelectorAll('.mbtn');
 
 // Pass DOM refs to render module
-setDOMRefs({boardEl,bwrapEl,bcontEl,tplrEl,lmvEl,chkiEl,scoreRow,scoreRedEl,scoreBlkEl});
-
 // ════════════════════════════════════════════════════════
 //  MOVE SELECTION HELPERS
 // ════════════════════════════════════════════════════════
@@ -3260,8 +3253,9 @@ render(G);
 // Check if opened via join link
 handleURLJoin(G, onGameStart);
 
-})().catch(err => {
-  console.error('MaxPlay init error:', err);
+})().catch(function(err) {
+  console.error('MaxPlay error:', err);
+  document.body.innerHTML += '<div style="color:red;padding:20px;font-family:monospace">Error: ' + err.message + '</div>';
 });
 
 </script>
