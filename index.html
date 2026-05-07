@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="MaxPlay — 8 classic board games, multiplayer. By MaxMin.">
-<title>MaxPlay v1778125730</title>
+<title>MaxPlay v1778145603</title>
 <style>
 /* ════════════════════════════════════════════════════════
    MaxPlay — game.css
@@ -452,9 +452,10 @@ footer{
   background:
     radial-gradient(ellipse at 30% 0%,rgba(180,120,40,.12) 0,transparent 60%),
     linear-gradient(160deg,#1c0f05 0%,#0e0804 60%,#160d04 100%);
-  display:flex;align-items:center;justify-content:center;
+  align-items:center;justify-content:center;
   padding:16px;
   overflow-y:auto;
+  /* display controlled by JS — starts hidden */
 }
 
 #lobby-content{
@@ -687,11 +688,11 @@ footer{
 </div>
 
 <script type="module">
-// MaxPlay — Firebase CDN imports
+// MaxPlay — Firebase
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { get, getDatabase, off, onDisconnect, onValue, push, ref, serverTimestamp, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-// MaxPlay — Game Engine
+// MaxPlay — Engine
 (async function() {
 
 // ── state.js ──
@@ -2180,7 +2181,6 @@ function _checkSPConfirmation(G, lmvEl, chkiEl) {
 //  Reads G state, writes to DOM. Never modifies G.
 // ════════════════════════════════════════════════════════
 // ── DOM REFS (set once on boot) ───────────────────────────────────────
-// DOM refs shared from main.js scope
 function setDOMRefs(refs) {
   ({boardEl, bwrapEl, bcontEl, tplrEl, lmvEl, chkiEl, scoreRow, scoreRedEl, scoreBlkEl} = refs);
 }
@@ -3255,7 +3255,7 @@ handleURLJoin(G, onGameStart);
 
 })().catch(function(err) {
   console.error('MaxPlay error:', err);
-  document.body.innerHTML += '<div style="color:red;padding:20px;font-family:monospace">Error: ' + err.message + '</div>';
+  document.body.innerHTML += '<div style="color:red;padding:20px;font-family:monospace;position:fixed;top:0;left:0;right:0;background:#111;z-index:9999">Error: ' + err.message + '<br>' + err.stack + '</div>';
 });
 
 </script>
