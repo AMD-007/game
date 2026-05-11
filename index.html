@@ -2996,7 +2996,7 @@ async function hostGame(G, color, onGameStart) {
   } catch(err) {
     el.innerHTML = `
       <div class="home-wrap">
-        <div class="home-err" style="display:block">Failed: ${err.message}</div>
+        <div class="home-err" style="display:block">${err.message.includes('permission_denied') ? '🔒 Firebase permission denied. Set database rules to allow read/write.' : 'Error: '+err.message}</div>
         <button class="home-btn home-btn-back" id="btn-retry">&#8592; Back</button>
       </div>`;
     document.getElementById('btn-retry').onclick = () =>
